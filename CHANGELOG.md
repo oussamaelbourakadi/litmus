@@ -6,6 +6,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — Phase 1.7 (deployment & docs)
+
+- Render blueprint (`render.yaml`) for the backend + managed Postgres, and a
+  deploy guide (`docs/DEPLOY.md`) for Render + Vercel.
+- Postgres URL scheme normalization (`postgres://` / `postgresql://` →
+  `postgresql+asyncpg://`) and `$PORT` binding for managed hosting.
+- Full README overhaul (badges, architecture, quickstart, CLI/SDK/Action
+  examples, roadmap) and `docs/PORTFOLIO_BLURB.md`.
+- Bumped `actions/checkout` to v5.
+
 ### Added — Phase 1.6 (SDK, CLI, CI gate)
 
 - `litmus-sdk` package (import `litmus`): a serverless local runner (Python or

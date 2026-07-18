@@ -6,30 +6,38 @@
 
 Open-source, self-hostable platform to **evaluate**, **red-team**, and **monitor** AI
 systems — LLMs, RAG, agents, and vision — before and after production.
+**Runs with no API key.**
 
 [![CI](https://github.com/oussamaelbourakadi/litmus/actions/workflows/ci.yml/badge.svg)](https://github.com/oussamaelbourakadi/litmus/actions/workflows/ci.yml)
+[![Litmus Eval Gate](https://github.com/oussamaelbourakadi/litmus/actions/workflows/litmus-eval.yml/badge.svg)](https://github.com/oussamaelbourakadi/litmus/actions/workflows/litmus-eval.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
 ![Node 24](https://img.shields.io/badge/node-24-green.svg)
+
+**Live demo:** _dashboard_ · _docs_ — add your URLs after deploying ([`docs/DEPLOY.md`](./docs/DEPLOY.md))
 
 </div>
 
 ---
 
-> **Status:** Phase 1.0 (foundation) — the monorepo, backend/DB, plugin architecture,
-> dashboard shell, and CI are in place. The evaluation engine, dashboard, SDK, and CI
-> gate land in Phases 1.1–1.7. A live demo URL will be published with Phase 1.7.
+> **Status:** Phase 1 — **Evaluate** — is complete: engine, metrics with confidence
+> intervals, run comparison / regression gate, dashboard, and an SDK + CLI + GitHub
+> Action. Red-Team (OWASP LLM), adversarial Vision, and Monitor are on the roadmap.
+
+<!-- Demo media: record short GIFs of the dashboard and drop them in docs/media/, then uncomment:
+![Evaluate demo](docs/media/evaluate.gif)
+-->
 
 ## Why Litmus
 
 Litmus is a **professional-grade demonstrator** that coexists with tools like
 Promptfoo, DeepEval, and Langfuse — not a clone. Its differentiation:
 
-- **Adversarial vision / multimodal module** — largely absent from text-only competitors.
-- **Statistical rigor** — bootstrap confidence intervals, fixed seeds, reproducible runs. No invented metrics.
+- **Statistical rigor** — bootstrap confidence intervals on every aggregate, fixed seeds, reproducible runs. No invented metrics.
 - **Runs with no API key** — mock + local (Ollama) providers, so anyone can clone and try it.
-- **SDK + CLI + GitHub Action** — a real developer tool, not just a UI.
-- **Clean plugin architecture** — an evaluator, an attack, a provider, or a connector is a single class. Adding a capability never touches the core.
+- **A real CI gate** — an SDK + CLI + GitHub Action that fails the build on regression.
+- **Clean plugin architecture** — a provider, evaluator, target (and later attack) is a single class + a decorator. Adding a capability never touches the core.
+- **Adversarial vision / multimodal module** (roadmap) — largely absent from text-only competitors.
 
 ## Three pillars, aligned with the lifecycle
 
@@ -41,6 +49,7 @@ Promptfoo, DeepEval, and Langfuse — not a clone. Its differentiation:
 │ Metrics + CI    │    │ OWASP LLM Top10 │    │ Live traces     │
 │ Comparison      │    │ Adversarial     │    │ Drift + alerts  │
 │ Regression gate │    │ vision attacks  │    │ Trace-to-test   │
+│   ✅ shipped    │    │   ⏳ roadmap    │    │   ⏳ roadmap    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -50,29 +59,38 @@ Promptfoo, DeepEval, and Langfuse — not a clone. Its differentiation:
 flowchart LR
     subgraph Clients
       UI[Next.js dashboard]
-      SDK[Python SDK / CLI]
-      GHA[GitHub Action]
+      CLI[Python SDK / CLI]
+      GHA[GitHub Action gate]
     end
     subgraph Backend[FastAPI backend]
       API[API routers]
-      ENG[Engine: runner · metrics · compare]
+      ENG[Engine<br/>runner · metrics · compare]
       REG[(Plugin registry)]
-      PROV[Providers]
-      EVAL[Evaluators]
+      PROV[Providers<br/>mock · ollama · openai · …]
+      EVAL[Evaluators<br/>exact · regex · json · llm-judge]
+      TGT[Targets<br/>provider · http]
     end
     DB[(PostgreSQL)]
-    REDIS[(Redis)]
 
     UI --> API
-    SDK --> API
-    GHA --> SDK
+    CLI --> API
+    GHA --> CLI
     API --> ENG
     ENG --> REG
     REG --- PROV
     REG --- EVAL
+    REG --- TGT
     ENG --> DB
-    ENG -. async jobs .-> REDIS
 ```
+
+## Evaluate — what ships today
+
+- **Providers:** Mock (deterministic, seeded), Ollama (local, no key), OpenAI / Anthropic / Mistral (optional, env-gated).
+- **Evaluators:** ExactMatch, RegexMatch, JsonSchema, LLMJudge (rubric → JSON verdict) + judge calibration (agreement, Cohen's kappa).
+- **Engine:** per-case error isolation, AND verdict, repeats; metrics = success rate **with bootstrap CI**, latency P50/P95, cost (price table), per-evaluator pass rates.
+- **Compare:** aggregate deltas + per-case regressions + an absolute/relative **threshold verdict**.
+- **Dashboard:** projects → datasets (CSV upload) → runs → metric cards + per-case table → comparison with highlighted regressions.
+- **SDK + CLI + GitHub Action:** local, serverless runs that **fail CI on regression**.
 
 ## Quickstart (5 minutes, no API key)
 
@@ -82,44 +100,32 @@ cd litmus
 docker compose up --build
 ```
 
-- Backend API: http://localhost:8000 (Swagger at `/docs`, health at `/health`)
+- API: http://localhost:8000 (Swagger `/docs`, health `/health`)
 - Dashboard: http://localhost:3000
 
-## Local development
+## CLI / SDK / GitHub Action
 
-**Backend** (Python 3.12 via [uv](https://docs.astral.sh/uv/)):
-
-```bash
-cd backend
-uv sync
-uv run pytest            # in-memory SQLite, no network, no key
-uv run uvicorn app.main:app --reload
-```
-
-**Frontend** (Node 24):
+**CLI** (serverless, exits non-zero on regression):
 
 ```bash
-cd frontend
-npm install
-npm run dev
+uv pip install ./sdk
+litmus init                       # scaffold litmus.yaml + a demo target
+litmus run --config litmus.yaml   # evaluate and gate on regressions
 ```
 
-## Repository structure
+**SDK** (run an eval in ~10 lines):
 
+```python
+from litmus import Case, ExactMatch, run_local
+
+cases = [Case(input="capital of France?", expected="Paris")]
+result = run_local(cases, lambda prompt: "Paris", [ExactMatch()])
+print(result.success_rate, result.ci_low, result.ci_high)
 ```
-litmus/
-├── backend/     FastAPI · SQLAlchemy 2 async · Alembic · plugin registry
-│   └── app/
-│       ├── api/         routers (health, …)
-│       ├── core/        generic plugin Registry
-│       ├── db/          base, mixins, async session
-│       ├── models/      ORM models (Project, …)
-│       ├── providers/   ModelProvider interface + registry
-│       └── evaluators/  Evaluator interface + registry
-├── frontend/    Next.js (App Router) · TypeScript strict · Tailwind
-├── docker-compose.yml
-└── .github/workflows/ci.yml
-```
+
+**GitHub Action** — add the [`litmus-eval.yml`](./.github/workflows/litmus-eval.yml)
+workflow; it installs the SDK and fails the build when the success rate drops
+below your baseline.
 
 ## Extending Litmus (plugin architecture)
 
@@ -135,19 +141,38 @@ class MyProvider(ModelProvider):
         ...
 ```
 
-The engine discovers plugins by name; the core never changes.
+The same pattern applies to evaluators (`evaluator_registry`) and targets
+(`target_registry`). The engine discovers plugins by name; the core never changes.
+
+## Repository structure
+
+```
+litmus/
+├── backend/     FastAPI · SQLAlchemy 2 async · Alembic · engine · plugin registry
+├── frontend/    Next.js (App Router) · TypeScript strict · Tailwind dashboard
+├── sdk/         litmus-sdk — local runner + Typer CLI + CI gate
+├── examples/    demo target, dataset, litmus.yaml, SDK quickstart
+├── docs/        DEPLOY.md · PORTFOLIO_BLURB.md
+├── docker-compose.yml
+└── .github/workflows/   ci.yml · litmus-eval.yml
+```
 
 ## Roadmap
 
 | Phase | Pillar | Status |
 |-------|--------|--------|
-| 1 | **Evaluate** — engine, metrics, comparison, dashboard, SDK/CLI, CI gate | 🚧 1.0 done |
+| 1 | **Evaluate** — engine, metrics, comparison, dashboard, SDK/CLI, CI gate | ✅ shipped |
 | 2 | **Red-Team (LLM)** — OWASP LLM Top 10 attacks, defenses, report | ⏳ planned |
 | 3 | **Adversarial Vision** — FGSM/PGD/patch, face-recognition showcase | ⏳ planned |
 | 4 | **Monitor** — traces, online eval, drift, alerts, trace-to-test | ⏳ planned |
 | 5 | **Product** — auth, multi-project, docs, landing | ⏳ planned |
 
 Contributions welcome — see the issue templates and PR checklist.
+
+## Deployment
+
+Backend on Render (Docker + managed Postgres), frontend on Vercel — see
+[`docs/DEPLOY.md`](./docs/DEPLOY.md). Runs with no API key.
 
 ## Author
 
