@@ -19,3 +19,11 @@ async def test_list_targets(client: AsyncClient) -> None:
     names = response.json()["targets"]
     assert "provider" in names
     assert "http" in names
+
+
+async def test_list_evaluators(client: AsyncClient) -> None:
+    response = await client.get("/evaluators")
+    assert response.status_code == 200
+    names = response.json()["evaluators"]
+    for expected in ("exact_match", "regex_match", "json_schema", "llm_judge"):
+        assert expected in names

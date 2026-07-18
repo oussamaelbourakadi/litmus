@@ -46,7 +46,8 @@ def test_builtin_registries_are_wired() -> None:
     from app.evaluators import evaluator_registry
     from app.providers import provider_registry
 
-    # Providers are registered in 1.1; evaluators arrive in 1.2.
+    # Providers (1.1) and evaluators (1.2) are registered on import.
     assert "mock" in provider_registry
     assert "ollama" in provider_registry
-    assert len(evaluator_registry) == 0
+    assert "exact_match" in evaluator_registry
+    assert "llm_judge" in evaluator_registry
