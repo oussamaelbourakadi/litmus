@@ -39,6 +39,22 @@ def test_upgrade_creates_projects_table(tmp_path: Path) -> None:
     assert "projects" in tables
 
 
+def test_upgrade_creates_all_eval_tables(tmp_path: Path) -> None:
+    db_file = tmp_path / "migration_eval.db"
+    cfg = _alembic_config(db_file)
+
+    command.upgrade(cfg, "head")
+
+    connection = sqlite3.connect(db_file)
+    try:
+        rows = connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+    finally:
+        connection.close()
+    tables = {row[0] for row in rows}
+    for expected in ("projects", "datasets", "test_cases", "eval_runs", "case_results"):
+        assert expected in tables
+
+
 def test_downgrade_removes_projects_table(tmp_path: Path) -> None:
     db_file = tmp_path / "migration_downgrade.db"
     cfg = _alembic_config(db_file)
