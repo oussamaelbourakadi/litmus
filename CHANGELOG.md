@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — Phase 1.4 (compare & regression)
+
+- Engine `compare_runs`: aggregate deltas, per-case regression/improvement
+  classification, and a configurable threshold verdict (absolute or relative) —
+  the primitive behind the CI gate.
+- API: `POST /compare`, list datasets per project, list runs per dataset, and
+  append test cases to a dataset via JSON or CSV (text field, no new dependency).
+
 ### Added — Phase 1.3 (runner, metrics, persistence)
 
 - Models `Dataset`, `TestCase`, `EvalRun`, `CaseResult` + Alembic migration 0002.
