@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.catalog import router as catalog_router
+from app.api.compare import router as compare_router
 from app.api.datasets import router as datasets_router
 from app.api.health import router as health_router
 from app.api.projects import router as projects_router
@@ -66,6 +67,7 @@ def create_app() -> FastAPI:
     app.include_router(projects_router)
     app.include_router(datasets_router)
     app.include_router(runs_router)
+    app.include_router(compare_router)
     return app
 
 

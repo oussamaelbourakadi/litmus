@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TestCaseCreate(BaseModel):
@@ -33,3 +33,21 @@ class DatasetRead(BaseModel):
     name: str
     description: str | None = None
     cases: list[TestCaseRead] = Field(default_factory=list)
+
+
+class DatasetSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    project_id: uuid.UUID
+    name: str
+    description: str | None = None
+
+
+class CasesAppend(BaseModel):
+    cases: list[TestCaseCreate] = Field(default_factory=list)
+
+
+class CsvUpload(BaseModel):
+    # Raw CSV text with a header row; recognized columns: input, expected.
+    csv: str

@@ -27,7 +27,13 @@ from app.models.eval_run import EvalRun, RunStatus
 from app.models.test_case import TestCase
 from app.providers.base import ProviderConfig
 from app.providers.registry_utils import make_provider
-from app.schemas.run import CaseResultRead, EvaluatorSpec, RunCreate, RunRead
+from app.schemas.run import (
+    CaseResultRead,
+    EvaluatorSpec,
+    RunCreate,
+    RunRead,
+    RunSummaryRead,
+)
 from app.targets.provider_target import ProviderTarget
 
 router = APIRouter(tags=["runs"])
@@ -211,3 +217,25 @@ async def create_run(dataset_id: uuid.UUID, payload: RunCreate, db: DbSession) -
 @router.get("/runs/{run_id}", response_model=RunRead)
 async def get_run(run_id: uuid.UUID, db: DbSession) -> RunRead:
     return await _read_run(db, run_id)
+
+
+@router.get("/datasets/{dataset_id}/runs", response_model=list[RunSummaryRead])
+async def list_runs(dataset_id: uuid.UUID, db: DbSession) -> list[RunSummaryRead]:
+    result = await db.execute(
+        select(EvalRun).where(EvalRun.dataset_id == dataset_id).order_by(EvalRun.created_at.desc())
+    )
+    summaries: list[RunSummaryRead] = []
+    for run in result.scalars().all():
+        success_rate = run.aggregates.get("success_rate")
+        summaries.append(
+            RunSummaryRead(
+                id=run.id,
+                dataset_id=run.dataset_id,
+                status=run.status,
+                success_rate=(
+                    float(success_rate) if isinstance(success_rate, (int, float)) else None
+                ),
+                created_at=run.created_at,
+            )
+        )
+    return summaries

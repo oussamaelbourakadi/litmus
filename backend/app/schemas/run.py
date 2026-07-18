@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -44,3 +45,11 @@ class RunRead(BaseModel):
     aggregates: dict[str, Any] = Field(default_factory=dict)
     error: str | None = None
     results: list[CaseResultRead] = Field(default_factory=list)
+
+
+class RunSummaryRead(BaseModel):
+    id: uuid.UUID
+    dataset_id: uuid.UUID
+    status: str
+    success_rate: float | None = None
+    created_at: datetime
