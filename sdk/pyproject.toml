@@ -1,0 +1,47 @@
+[project]
+name = "litmus-sdk"
+version = "0.1.0"
+description = "Litmus SDK + CLI — evaluate AI systems locally and gate CI on regressions."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Oussama El Bourakadi" }]
+dependencies = [
+    "typer>=0.12.0",
+    "pyyaml>=6.0.0",
+    "httpx>=0.28.0",
+]
+
+[project.scripts]
+litmus = "litmus.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "mypy>=1.13.0",
+    "ruff>=0.8.0",
+    "types-pyyaml>=6.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["litmus"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["litmus"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
