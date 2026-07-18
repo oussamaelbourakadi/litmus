@@ -42,10 +42,11 @@ def test_unknown_lookup_raises() -> None:
         registry.get("missing")
 
 
-def test_builtin_registries_are_empty_but_wired() -> None:
+def test_builtin_registries_are_wired() -> None:
     from app.evaluators import evaluator_registry
     from app.providers import provider_registry
 
-    # No concrete plugins yet (arrive in 1.1 / 1.2) but the registries exist.
-    assert len(provider_registry) == 0
+    # Providers are registered in 1.1; evaluators arrive in 1.2.
+    assert "mock" in provider_registry
+    assert "ollama" in provider_registry
     assert len(evaluator_registry) == 0
