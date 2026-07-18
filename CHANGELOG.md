@@ -6,6 +6,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — Phase 1.2 (evaluators)
+
+- Evaluators registered on `evaluator_registry`: `ExactMatch` (normalized),
+  `RegexMatch`, `JsonSchema` (via `jsonschema`), and `LLMJudge` (rubric-based,
+  JSON verdict with robust float fallback, provider-agnostic).
+- Judge calibration utilities: `judge_agreement` (accuracy vs human labels) and
+  `cohen_kappa`.
+- `Evaluator.score` is now async and takes a typed `EvalCase`.
+- `MockProvider` gained a `default` response for deterministic judge tests.
+- Read-only `GET /evaluators` catalog endpoint.
+
 ### Added — Phase 1.1 (providers & targets)
 
 - Concrete providers registered on `provider_registry`: `MockProvider`
