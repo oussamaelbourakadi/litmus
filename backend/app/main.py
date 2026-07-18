@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.api.catalog import router as catalog_router
 from app.api.health import router as health_router
 from app.config import get_settings
 
@@ -58,6 +59,7 @@ def create_app() -> FastAPI:
         return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
     app.include_router(health_router)
+    app.include_router(catalog_router)
     return app
 
 

@@ -32,6 +32,8 @@ services:
       DATABASE_URL: postgresql+asyncpg://litmus:litmus@postgres:5432/litmus
       REDIS_URL: redis://redis:6379/0
       CORS_ORIGINS: http://localhost:3000
+      # Optional: point at a host-run Ollama (no key). Harmless if Ollama is absent.
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
     ports:
       - "8000:8000"
     depends_on:
