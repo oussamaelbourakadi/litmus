@@ -1,19 +1,29 @@
-"""Evaluator interface and registry (Phase 1.0 seed).
+"""Evaluator interface and registry.
 
-An evaluator scores a model ``output`` against an expected reference and returns
+An evaluator scores a model ``output`` for a given :class:`EvalCase` and returns
 a normalized score in [0, 1] plus a pass/fail verdict and an optional reason.
 
-The signature is intentionally minimal for the scaffold; in Phase 1.2 it will
-accept the full ``TestCase`` model (which does not exist yet) instead of a bare
-``expected`` string.
+``score`` is async so the runner (1.3) can await every evaluator uniformly;
+deterministic evaluators simply never await, while :class:`LLMJudge` awaits a
+provider. ``EvalCase`` is a lightweight, non-ORM input; the persisted
+``TestCase`` model (1.3) maps onto it.
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.core.registry import Registry
+
+
+@dataclass(slots=True)
+class EvalCase:
+    """A single case to evaluate."""
+
+    input: str
+    expected: str | None = None
+    metadata: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -31,8 +41,8 @@ class Evaluator(ABC):
     name: str = "base"
 
     @abstractmethod
-    def score(self, output: str, expected: str | None = None) -> EvalScore:
-        """Score ``output`` against ``expected``."""
+    async def score(self, case: EvalCase, output: str) -> EvalScore:
+        """Score ``output`` for ``case``."""
         raise NotImplementedError
 
 
