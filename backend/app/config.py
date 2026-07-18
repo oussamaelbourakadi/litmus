@@ -43,6 +43,24 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
+    # --- Providers ---------------------------------------------------------
+    # Shared HTTP timeout (seconds) for provider/target requests.
+    request_timeout: float = 30.0
+
+    # Ollama (local, no key). Use host.docker.internal to reach a host Ollama from a container.
+    ollama_base_url: str = "http://localhost:11434"
+
+    # Optional cloud provider keys. Absent by default → the platform runs on
+    # mock/local only; cloud providers raise a clear error if used without a key.
+    openai_api_key: str | None = None
+    anthropic_api_key: str | None = None
+    mistral_api_key: str | None = None
+
+    openai_base_url: str = "https://api.openai.com/v1"
+    anthropic_base_url: str = "https://api.anthropic.com/v1"
+    mistral_base_url: str = "https://api.mistral.ai/v1"
+    anthropic_version: str = "2023-06-01"
+
     @property
     def is_production(self) -> bool:
         return self.environment.lower() == "production"

@@ -13,6 +13,10 @@ from dataclasses import dataclass, field
 from app.core.registry import Registry
 
 
+class ProviderError(RuntimeError):
+    """Raised when a provider cannot fulfil a request (e.g. missing API key)."""
+
+
 @dataclass(slots=True)
 class ProviderConfig:
     """Generation parameters. ``seed`` enables reproducible runs."""
