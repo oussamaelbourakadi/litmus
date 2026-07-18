@@ -1,0 +1,5 @@
+[
+  {"input": "capital of France?", "expected": "Paris"},
+  {"input": "2+2?", "expected": "4"},
+  {"input": "color of the sky?", "expected": "blue"}
+]

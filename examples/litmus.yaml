@@ -1,0 +1,13 @@
+name: demo-qa
+target:
+  type: python
+  entrypoint: demo_target:answer
+dataset: datasets/qa.json
+evaluators:
+  - type: exact_match
+repeats: 1
+seed: 0
+threshold:
+  mode: absolute
+  max_drop: 0.0
+baseline: baseline.json
