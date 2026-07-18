@@ -6,6 +6,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — Phase 1.3 (runner, metrics, persistence)
+
+- Models `Dataset`, `TestCase`, `EvalRun`, `CaseResult` + Alembic migration 0002.
+- Engine: `EvalRunner` (per-case error isolation, AND verdict, repeats),
+  `metrics` (success rate, latency P50/P95, cost via price table, per-evaluator
+  pass rates, mean±std over repeats), and seeded `bootstrap_ci`.
+- API: create/list/get projects, create/get datasets with test cases, launch a
+  run (synchronous) and read results + aggregates. Runs are persisted.
+- Confidence intervals on the aggregate success rate (bootstrap, seeded).
+
 ### Added — Phase 1.2 (evaluators)
 
 - Evaluators registered on `evaluator_registry`: `ExactMatch` (normalized),
