@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from app.evaluators import evaluator_registry
 from app.providers import provider_registry
 from app.targets import target_registry
 
@@ -22,3 +23,8 @@ async def list_providers() -> dict[str, list[str]]:
 @router.get("/targets", summary="List registered target types")
 async def list_targets() -> dict[str, list[str]]:
     return {"targets": target_registry.names()}
+
+
+@router.get("/evaluators", summary="List registered evaluators")
+async def list_evaluators() -> dict[str, list[str]]:
+    return {"evaluators": evaluator_registry.names()}
