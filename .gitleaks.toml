@@ -1,0 +1,12 @@
+title = "Litmus gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Example and lockfiles contain no real secrets"
+paths = [
+  '''\.env\.example$''',
+  '''package-lock\.json$''',
+  '''uv\.lock$''',
+]
