@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — Phase 1.5 (dashboard)
+
+- Next.js dashboard for the Evaluate pillar: projects, datasets (with CSV case
+  upload), launching runs, run detail (metric cards with the success-rate CI, and
+  a per-case results table), and run comparison with highlighted regressions and
+  a verdict badge.
+- Typed API client (plain fetch), a `useAsync` hook, and Tailwind UI primitives.
+- Component and API-client tests (vitest + Testing Library, jsdom).
+
 ### Added — Phase 1.4 (compare & regression)
 
 - Engine `compare_runs`: aggregate deltas, per-case regression/improvement
