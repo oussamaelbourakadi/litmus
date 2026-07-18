@@ -6,6 +6,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — Phase 1.1 (providers & targets)
+
+- Concrete providers registered on `provider_registry`: `MockProvider`
+  (deterministic, seeded), `OllamaProvider` (local, no key), and `OpenAIProvider`
+  / `AnthropicProvider` / `MistralProvider` (raw httpx, gated by env keys).
+- `Target` abstraction with `ProviderTarget` and `HttpTarget` (configurable JSON
+  output path), both registered on `target_registry`.
+- Read-only catalog endpoints `GET /providers` and `GET /targets`.
+- Optional `OLLAMA_BASE_URL` in docker-compose; `httpx` promoted to a runtime
+  dependency.
+
 ## [0.1.0] — 2026-07-18
 
 ### Added — Phase 1.0 (foundation)
