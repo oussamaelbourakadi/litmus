@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { cn } from "@/lib/utils";
 
 interface Pillar {
@@ -49,6 +51,12 @@ export default function Home() {
           <span className="font-medium text-slate-200">no API key</span> thanks to mock and local
           providers.
         </p>
+        <Link
+          href="/projects"
+          className="inline-block rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500"
+        >
+          Open the dashboard →
+        </Link>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-3" aria-label="Product pillars">
@@ -68,8 +76,8 @@ export default function Home() {
       </section>
 
       <footer className="text-sm text-slate-500">
-        Phase 1.0 — foundation scaffold. Engine, dashboard, SDK, and CI gate land in the next
-        sub-phases.
+        Evaluate pillar is live: create projects and datasets, launch runs, and compare results in
+        the dashboard. SDK, CLI, and CI gate land next.
       </footer>
     </main>
   );
