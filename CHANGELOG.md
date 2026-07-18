@@ -6,6 +6,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — Phase 1.6 (SDK, CLI, CI gate)
+
+- `litmus-sdk` package (import `litmus`): a serverless local runner (Python or
+  HTTP targets, per-case isolation), lightweight evaluators, seeded bootstrap CI
+  metrics, scalar regression compare, YAML config loader, and a thin server client.
+- Typer CLI: `litmus init`, `litmus run --config` (exits non-zero on regression),
+  and `litmus report`.
+- `examples/` demo target, dataset, config, and baseline (no API key).
+- GitHub Action `litmus-eval.yml` (the CI gate) and an `sdk` job in CI.
+
 ### Added — Phase 1.5 (dashboard)
 
 - Next.js dashboard for the Evaluate pillar: projects, datasets (with CSV case
