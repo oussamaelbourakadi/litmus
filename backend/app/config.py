@@ -43,6 +43,16 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
+    @field_validator("database_url", mode="after")
+    @classmethod
+    def _normalize_db_url(cls, value: str) -> str:
+        """Coerce Heroku/Render-style Postgres URLs to the async (asyncpg) driver."""
+        if value.startswith("postgres://"):
+            return "postgresql+asyncpg://" + value.removeprefix("postgres://")
+        if value.startswith("postgresql://"):
+            return "postgresql+asyncpg://" + value.removeprefix("postgresql://")
+        return value
+
     # --- Providers ---------------------------------------------------------
     # Shared HTTP timeout (seconds) for provider/target requests.
     request_timeout: float = 30.0

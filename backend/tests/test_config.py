@@ -23,3 +23,21 @@ def test_cors_origins_defaults_when_unset(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.delenv("CORS_ORIGINS", raising=False)
     settings = Settings()
     assert settings.cors_origins == ["http://localhost:3000"]
+
+
+def test_database_url_postgres_scheme_normalized(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgres://u:p@host:5432/db")
+    settings = Settings()
+    assert settings.database_url == "postgresql+asyncpg://u:p@host:5432/db"
+
+
+def test_database_url_postgresql_scheme_normalized(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@host/db")
+    settings = Settings()
+    assert settings.database_url == "postgresql+asyncpg://u:p@host/db"
+
+
+def test_database_url_async_scheme_unchanged(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://u:p@host/db")
+    settings = Settings()
+    assert settings.database_url == "postgresql+asyncpg://u:p@host/db"
