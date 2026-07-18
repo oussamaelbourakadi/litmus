@@ -1,0 +1,35 @@
+name: Litmus Eval Gate
+
+# Demonstrates the CI gate: install the SDK and evaluate a demo target with no
+# API key. The job stays green while the target meets the baseline; a regression
+# (success rate dropping below the threshold) makes `litmus run` exit non-zero
+# and fails the build.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    name: Evaluate demo target
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install the Litmus SDK
+        run: |
+          uv venv
+          uv pip install ./sdk
+
+      - name: Run the Litmus gate
+        run: .venv/bin/litmus run --config examples/litmus.yaml
