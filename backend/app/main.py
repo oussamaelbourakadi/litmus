@@ -11,7 +11,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.catalog import router as catalog_router
+from app.api.datasets import router as datasets_router
 from app.api.health import router as health_router
+from app.api.projects import router as projects_router
+from app.api.runs import router as runs_router
 from app.config import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -60,6 +63,9 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(catalog_router)
+    app.include_router(projects_router)
+    app.include_router(datasets_router)
+    app.include_router(runs_router)
     return app
 
 
