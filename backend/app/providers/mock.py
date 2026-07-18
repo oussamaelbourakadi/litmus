@@ -21,18 +21,26 @@ from app.providers.base import (
 class MockProvider(ModelProvider):
     """Provider that echoes a deterministic, seed-dependent response.
 
-    Optionally, ``responses`` maps exact prompts to canned outputs, which is
-    convenient for asserting evaluator behaviour in tests.
+    Optionally, ``responses`` maps exact prompts to canned outputs and
+    ``default`` provides a fixed reply for any other prompt — both convenient for
+    asserting evaluator behaviour (e.g. a fixed LLM-judge verdict) in tests.
     """
 
     name = "mock"
 
-    def __init__(self, responses: dict[str, str] | None = None) -> None:
+    def __init__(
+        self,
+        responses: dict[str, str] | None = None,
+        default: str | None = None,
+    ) -> None:
         self._responses = responses or {}
+        self._default = default
 
     async def generate(self, prompt: str, config: ProviderConfig) -> GenerateResult:
         if prompt in self._responses:
             text = self._responses[prompt]
+        elif self._default is not None:
+            text = self._default
         else:
             text = self._synthesize(prompt, config.seed)
         usage = Usage(
