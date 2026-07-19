@@ -9,7 +9,7 @@ async def test_list_providers(client: AsyncClient) -> None:
     response = await client.get("/providers")
     assert response.status_code == 200
     names = response.json()["providers"]
-    for expected in ("mock", "ollama", "openai", "anthropic", "mistral"):
+    for expected in ("mock", "scripted", "ollama", "openai", "anthropic", "mistral"):
         assert expected in names
 
 

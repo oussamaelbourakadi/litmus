@@ -21,6 +21,7 @@ from app.providers.mistral import MistralProvider
 from app.providers.mock import MockProvider
 from app.providers.ollama import OllamaProvider
 from app.providers.openai import OpenAIProvider
+from app.providers.scripted import ScriptedProvider
 
 __all__ = [
     "AnthropicProvider",
@@ -32,6 +33,7 @@ __all__ = [
     "OpenAIProvider",
     "ProviderConfig",
     "ProviderError",
+    "ScriptedProvider",
     "Usage",
     "provider_registry",
 ]

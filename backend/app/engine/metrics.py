@@ -15,6 +15,9 @@ from app.engine.bootstrap import ConfidenceInterval, bootstrap_ci
 # model -> (USD per 1k input tokens, USD per 1k output tokens). Extend as needed.
 DEFAULT_PRICES: dict[str, tuple[float, float]] = {
     "mock": (0.0, 0.0),
+    # Simulated demo prices for the scripted fixture provider.
+    "mock-small": (0.0005, 0.0015),
+    "mock-large": (0.01, 0.03),
     "gpt-4o": (0.005, 0.015),
     "gpt-4o-mini": (0.00015, 0.0006),
     "claude-3-5-sonnet": (0.003, 0.015),
