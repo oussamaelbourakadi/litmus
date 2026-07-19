@@ -41,3 +41,33 @@ def test_database_url_async_scheme_unchanged(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://u:p@host/db")
     settings = Settings()
     assert settings.database_url == "postgresql+asyncpg://u:p@host/db"
+
+
+def test_neon_sslmode_is_stripped_and_ssl_enabled() -> None:
+    from app.db.session import _prepare_asyncpg_url
+
+    cleaned, connect_args = _prepare_asyncpg_url(
+        "postgresql+asyncpg://u:p@ep.neon.tech/db?sslmode=require"
+    )
+    assert "sslmode" not in cleaned
+    assert connect_args == {"ssl": True}
+
+
+def test_channel_binding_is_stripped() -> None:
+    from app.db.session import _prepare_asyncpg_url
+
+    cleaned, connect_args = _prepare_asyncpg_url(
+        "postgresql+asyncpg://u:p@h/db?sslmode=require&channel_binding=require"
+    )
+    assert "channel_binding" not in cleaned
+    assert "sslmode" not in cleaned
+    assert connect_args == {"ssl": True}
+
+
+def test_plain_url_is_unchanged() -> None:
+    from app.db.session import _prepare_asyncpg_url
+
+    url = "postgresql+asyncpg://litmus:litmus@postgres:5432/litmus"
+    cleaned, connect_args = _prepare_asyncpg_url(url)
+    assert cleaned == url
+    assert connect_args == {}

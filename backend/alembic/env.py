@@ -11,13 +11,13 @@ import asyncio
 from logging.config import fileConfig
 
 from sqlalchemy import Connection, pool
-from sqlalchemy.ext.asyncio import async_engine_from_config
 
 # Import models so every table is attached to Base.metadata.
 import app.models  # noqa: F401
 from alembic import context
 from app.config import get_settings
 from app.db.base import Base
+from app.db.session import build_async_engine
 
 config = context.config
 
@@ -55,11 +55,8 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    url = config.get_main_option("sqlalchemy.url") or get_settings().database_url
+    connectable = build_async_engine(url, poolclass=pool.NullPool)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()
