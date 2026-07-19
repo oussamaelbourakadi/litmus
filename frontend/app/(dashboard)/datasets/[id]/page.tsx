@@ -15,6 +15,12 @@ import {
 import { useAsync } from "@/lib/hooks";
 import { formatPercent } from "@/lib/utils";
 
+const MODELS: Record<string, string[]> = {
+  mock: ["mock"],
+  scripted: ["mock-small", "mock-large"],
+  ollama: ["llama3"],
+};
+
 export default function DatasetDetailPage() {
   const params = useParams<{ id: string }>();
   const datasetId = params.id;
@@ -27,8 +33,14 @@ export default function DatasetDetailPage() {
   const [csvBusy, setCsvBusy] = useState(false);
   const [csvError, setCsvError] = useState<string | null>(null);
 
-  const [provider, setProvider] = useState("mock");
+  const [provider, setProvider] = useState("scripted");
+  const [model, setModel] = useState("mock-large");
   const [repeats, setRepeats] = useState(1);
+
+  function onProviderChange(value: string) {
+    setProvider(value);
+    setModel(MODELS[value]?.[0] ?? "mock");
+  }
   const [useExact, setUseExact] = useState(true);
   const [useRegex, setUseRegex] = useState(false);
   const [pattern, setPattern] = useState("");
@@ -65,7 +77,7 @@ export default function DatasetDetailPage() {
     setRunBusy(true);
     setRunError(null);
     try {
-      const run = await createRun(datasetId, { provider, repeats, evaluators });
+      const run = await createRun(datasetId, { provider, model, repeats, evaluators });
       router.push(`/runs/${run.id}`);
     } catch (err) {
       setRunError(err instanceof Error ? err.message : "run failed");
@@ -142,9 +154,22 @@ export default function DatasetDetailPage() {
               <label className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
                 Provider
               </label>
-              <Select value={provider} onChange={(e) => setProvider(e.target.value)}>
+              <Select value={provider} onChange={(e) => onProviderChange(e.target.value)}>
+                <option value="scripted">scripted</option>
                 <option value="mock">mock</option>
                 <option value="ollama">ollama</option>
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+                Model
+              </label>
+              <Select value={model} onChange={(e) => setModel(e.target.value)}>
+                {(MODELS[provider] ?? ["mock"]).map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
               </Select>
             </div>
             <div>
