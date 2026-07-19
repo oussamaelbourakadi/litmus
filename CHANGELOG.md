@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Reframed as a portfolio/CV project: the primary demo is **local Docker**
+  (`docker compose up`), a hosted demo is optional. Added a **Portfolio Demo**
+  section, screenshot placeholders in `docs/media/`, and a 2-minute demo-video
+  guide. CI and tests unchanged.
+
 ### Added — Phase 1.7 (deployment & docs)
 
 - **Card-free deploy stack**: Hugging Face Spaces (backend, Docker) + Neon

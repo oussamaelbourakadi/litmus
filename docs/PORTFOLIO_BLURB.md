@@ -43,4 +43,6 @@ secret scan). The roadmap adds LLM red-teaming (OWASP LLM Top 10), an adversaria
 ## Links
 
 - Repository: https://github.com/oussamaelbourakadi/litmus
-- Live demo: _add after deploying (see `docs/DEPLOY.md`)_
+- Demo: run locally with `docker compose up` (no API key) — see the README's
+  **Portfolio Demo** section and `docs/media/`. Optional hosted deploy in
+  `docs/DEPLOY.md`.

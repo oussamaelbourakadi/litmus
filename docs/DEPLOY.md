@@ -1,4 +1,8 @@
-# Deploying Litmus (free, no credit card)
+# Deploying Litmus (optional, free, no credit card)
+
+> **Optional.** Litmus is a portfolio project and does not need a hosted demo —
+> the primary demo is local Docker (`docker compose up`, see the README). This
+> guide is here only if you *want* a permanent hosted instance.
 
 A 100% free, permanent stack — **no credit card anywhere**:
 

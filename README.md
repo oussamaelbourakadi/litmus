@@ -14,7 +14,8 @@ systems — LLMs, RAG, agents, and vision — before and after production.
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
 ![Node 24](https://img.shields.io/badge/node-24-green.svg)
 
-**Live demo:** _dashboard_ · _docs_ — add your URLs after deploying ([`docs/DEPLOY.md`](./docs/DEPLOY.md))
+**Try it in 5 minutes locally** with `docker compose up` — no API key. See the
+[Portfolio Demo](#portfolio-demo) below.
 
 </div>
 
@@ -24,9 +25,54 @@ systems — LLMs, RAG, agents, and vision — before and after production.
 > intervals, run comparison / regression gate, dashboard, and an SDK + CLI + GitHub
 > Action. Red-Team (OWASP LLM), adversarial Vision, and Monitor are on the roadmap.
 
-<!-- Demo media: record short GIFs of the dashboard and drop them in docs/media/, then uncomment:
-![Evaluate demo](docs/media/evaluate.gif)
--->
+## Portfolio Demo
+
+Litmus is a portfolio / CV project. It does **not** require any hosted service —
+the intended way to see it is the **local Docker demo** (no API key, no account):
+
+```bash
+git clone https://github.com/oussamaelbourakadi/litmus.git
+cd litmus
+docker compose up --build
+# Dashboard → http://localhost:3000   ·   API docs → http://localhost:8000/docs
+```
+
+Then: create a project → add a dataset (CSV) → launch a run → open the run detail
+→ launch a second run → compare them and watch the regression get highlighted.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/media/dashboard.png" alt="Dashboard" /></td>
+    <td width="50%"><img src="docs/media/runs.png" alt="Run detail" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/media/compare.png" alt="Run comparison" /></td>
+    <td width="50%"><img src="docs/media/metrics.png" alt="Metrics with confidence intervals" /></td>
+  </tr>
+</table>
+
+> The images above are labeled **placeholders**. Replace them with real
+> screenshots of your running instance — see
+> [`docs/media/README.md`](./docs/media/README.md) for exactly what to capture.
+
+### Record a 2-minute demo video
+
+A short screen recording makes the project instantly legible to a recruiter:
+
+1. Start the stack: `docker compose up --build` and open `http://localhost:3000`.
+2. Record your screen (free tools): **Windows** Xbox Game Bar (`Win+G`) or
+   [OBS Studio](https://obsproject.com/); **macOS** `Cmd+Shift+5`; **Linux** OBS.
+3. Follow this ~2-minute script:
+   - **0:00** — Landing page → "Open the dashboard".
+   - **0:15** — Create a project, then a dataset; upload a small CSV of test cases.
+   - **0:40** — Launch a run (mock provider, exact-match evaluator).
+   - **1:00** — Open the run detail: point out the **success rate with its bootstrap
+     confidence interval**, latency P50/P95, and the per-case results table.
+   - **1:30** — Launch a second, weaker run; **Compare** the two → show the
+     highlighted regressions and the **verdict** badge.
+   - **1:50** — Mention it runs with **no API key** and the CLI gates CI on regression.
+4. Export as MP4, upload it (GitHub release asset, YouTube unlisted, or Loom), and
+   link it here.
 
 ## Why Litmus
 
@@ -169,11 +215,12 @@ litmus/
 
 Contributions welcome — see the issue templates and PR checklist.
 
-## Deployment
+## Deployment (optional)
 
-A 100% free stack with **no credit card**: backend on **Hugging Face Spaces**
-(Docker), database on **Neon** (serverless Postgres), frontend on **Vercel** —
-see [`docs/DEPLOY.md`](./docs/DEPLOY.md). Runs with no API key.
+A permanent hosted demo is **not required** — the primary demo is local Docker
+(above). If you do want one, there's a fully **card-free** path: backend on
+**Hugging Face Spaces** (Docker), database on **Neon** (serverless Postgres),
+frontend on **Vercel** — see [`docs/DEPLOY.md`](./docs/DEPLOY.md).
 
 ## Author
 
