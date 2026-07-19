@@ -171,8 +171,9 @@ Contributions welcome — see the issue templates and PR checklist.
 
 ## Deployment
 
-Backend on Render (Docker + managed Postgres), frontend on Vercel — see
-[`docs/DEPLOY.md`](./docs/DEPLOY.md). Runs with no API key.
+A 100% free stack with **no credit card**: backend on **Hugging Face Spaces**
+(Docker), database on **Neon** (serverless Postgres), frontend on **Vercel** —
+see [`docs/DEPLOY.md`](./docs/DEPLOY.md). Runs with no API key.
 
 ## Author
 

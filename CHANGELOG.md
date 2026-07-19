@@ -8,10 +8,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added — Phase 1.7 (deployment & docs)
 
-- Render blueprint (`render.yaml`) for the backend + managed Postgres, and a
-  deploy guide (`docs/DEPLOY.md`) for Render + Vercel.
-- Postgres URL scheme normalization (`postgres://` / `postgresql://` →
-  `postgresql+asyncpg://`) and `$PORT` binding for managed hosting.
+- **Card-free deploy stack**: Hugging Face Spaces (backend, Docker) + Neon
+  (Postgres) + Vercel (frontend). HF Space setup in `deploy/huggingface/`,
+  optional Render blueprint (`render.yaml`, external DB), and a full deploy guide
+  (`docs/DEPLOY.md`).
+- Managed-Postgres support: URL scheme normalization (`postgres://` →
+  `postgresql+asyncpg://`), asyncpg SSL handling for Neon (`sslmode` /
+  `channel_binding` stripped, `ssl` enabled) via `build_async_engine`, and
+  `$PORT` binding.
 - Full README overhaul (badges, architecture, quickstart, CLI/SDK/Action
   examples, roadmap) and `docs/PORTFOLIO_BLURB.md`.
 - Bumped `actions/checkout` to v5.
