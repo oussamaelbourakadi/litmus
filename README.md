@@ -37,8 +37,20 @@ docker compose up --build
 # Dashboard → http://localhost:3000   ·   API docs → http://localhost:8000/docs
 ```
 
-Then: create a project → add a dataset (CSV) → launch a run → open the run detail
-→ launch a second run → compare them and watch the regression get highlighted.
+Then walk through the demo — it uses the built-in **`scripted`** provider (a
+deterministic fixture model, no key), so the results are real, not faked:
+
+1. Create a **project**, then a **dataset**.
+2. Upload [`examples/datasets/demo_qa.csv`](./examples/datasets/demo_qa.csv)
+   (12 general-knowledge questions).
+3. Launch **Run #1** — provider `scripted`, model **`mock-small`** → **83% success**.
+4. Launch **Run #2** — provider `scripted`, model **`mock-large`** → **100% success**.
+5. **Compare** Run #1 (base) vs Run #2 (candidate): **+16.7%** success, 2 cases
+   improved (highlighted green), higher latency & cost, **verdict PASS**.
+
+The `scripted` provider answers a curated Q&A bank from its own knowledge; the
+`mock-small` tier deterministically misses two harder questions, so the two runs
+differ by a real, reproducible margin — the app computes every number.
 
 <table>
   <tr>
@@ -64,12 +76,13 @@ A short screen recording makes the project instantly legible to a recruiter:
    [OBS Studio](https://obsproject.com/); **macOS** `Cmd+Shift+5`; **Linux** OBS.
 3. Follow this ~2-minute script:
    - **0:00** — Landing page → "Open the dashboard".
-   - **0:15** — Create a project, then a dataset; upload a small CSV of test cases.
-   - **0:40** — Launch a run (mock provider, exact-match evaluator).
+   - **0:15** — Create a project and a dataset; upload `examples/datasets/demo_qa.csv`.
+   - **0:40** — Launch **Run #1**: provider `scripted`, model `mock-small`, exact-match.
    - **1:00** — Open the run detail: point out the **success rate with its bootstrap
-     confidence interval**, latency P50/P95, and the per-case results table.
-   - **1:30** — Launch a second, weaker run; **Compare** the two → show the
-     highlighted regressions and the **verdict** badge.
+     confidence interval**, latency P50/P95, cost, and the per-case results table.
+   - **1:20** — Launch **Run #2**: same, but model `mock-large` (100%).
+   - **1:35** — **Compare** Run #1 vs Run #2 → the two improved cases are highlighted
+     and the **verdict** badge shows PASS with the deltas.
    - **1:50** — Mention it runs with **no API key** and the CLI gates CI on regression.
 4. Export as MP4, upload it (GitHub release asset, YouTube unlisted, or Loom), and
    link it here.

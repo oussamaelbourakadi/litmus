@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `ScriptedProvider` (registered as `scripted`): a deterministic fixture model
+  with a built-in Q&A bank whose accuracy depends on the model tier
+  (`mock-small` misses two hard questions, `mock-large` answers all) — so the
+  portfolio demo produces real, reproducible PASS results and a meaningful run
+  comparison, with no API key. Adds a demo dataset (`examples/datasets/demo_qa.csv`),
+  simulated demo prices, and a model selector in the run form.
+
 ### Changed
 
 - Reframed as a portfolio/CV project: the primary demo is **local Docker**
