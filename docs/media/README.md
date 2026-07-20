@@ -10,6 +10,7 @@ fixture provider) — nothing is faked.
 | `dashboard.png` | Projects (`/projects`) | The projects list and the create-project form. |
 | `dataset.png` | Dataset detail | The 12 test cases (input → expected). |
 | `runs.png` | Dataset detail | The "Launch a run" form, the runs list (100% vs 83.3%), and the compare launcher. |
+| `run-detail.png` | Run detail (`/runs/{id}`) | Metric cards — success rate with its 95% bootstrap CI, latency P50/P95, cost, cases — and the per-case results table. |
 | `compare.png` | Comparison (`/compare`) | A −16.7% drop flagged as a **regression**, with success/latency deltas. |
 | `compare-cases.png` | Comparison (`/compare`) | The per-case diff with the two regressed cases highlighted. |
 
