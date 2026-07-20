@@ -36,7 +36,8 @@ secret scan). The roadmap adds LLM red-teaming (OWASP LLM Top 10), an adversaria
 
 1. **Bootstrap confidence intervals.** Every aggregate (e.g. success rate) reports
    a seeded percentile-bootstrap interval, so results are reproducible and
-   uncertainty is explicit — no invented point metrics.
+   uncertainty is explicit — no invented point metrics. The dashboard surfaces the
+   interval right next to the success rate on each run's detail page.
 2. **LLM-judge calibration.** The `LLMJudge` evaluator is provider-agnostic and
    returns a JSON verdict with a robust float fallback; `judge_agreement` and
    Cohen's kappa measure agreement against human labels, making "the judge is

@@ -31,14 +31,19 @@ Real screenshots of the **local Docker demo**, driven by the built-in `scripted`
 provider (a deterministic fixture model, **no API key**) — every number is computed
 by the app, nothing is mocked-up.
 
+<p align="center">
+  <img src="docs/media/landing.png" alt="Landing page" width="840"/>
+  <br/><sub><b>Landing</b> — the three pillars; Evaluate is shipped.</sub>
+</p>
+
 <table>
   <tr>
-    <td width="50%"><img src="docs/media/landing.png" alt="Landing page"/><br/><sub><b>Landing</b> — the three pillars; Evaluate is shipped.</sub></td>
     <td width="50%"><img src="docs/media/dashboard.png" alt="Projects dashboard"/><br/><sub><b>Projects</b> — create and browse evaluation projects.</sub></td>
+    <td width="50%"><img src="docs/media/dataset.png" alt="Dataset test cases"/><br/><sub><b>Dataset</b> — the test cases (input → expected).</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/media/dataset.png" alt="Dataset test cases"/><br/><sub><b>Dataset</b> — the test cases (input → expected).</sub></td>
     <td width="50%"><img src="docs/media/runs.png" alt="Runs and comparison launcher"/><br/><sub><b>Runs</b> — launch a run, see the runs list (100% vs 83.3%), pick two to compare.</sub></td>
+    <td width="50%"><img src="docs/media/run-detail.png" alt="Run detail metrics"/><br/><sub><b>Run detail</b> — 100% success with its 95% bootstrap CI, latency P50/P95, cost, and per-case results.</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/media/compare.png" alt="Run comparison"/><br/><sub><b>Compare</b> — a −16.7% drop flagged as a <b>regression</b>, with success/latency deltas.</sub></td>
