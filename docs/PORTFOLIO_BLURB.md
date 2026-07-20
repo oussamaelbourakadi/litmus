@@ -18,6 +18,20 @@ and is covered by a blocking CI pipeline (lint, types, tests, Docker builds,
 secret scan). The roadmap adds LLM red-teaming (OWASP LLM Top 10), an adversarial
 **vision** module (FGSM/PGD/patch — the differentiator), and production monitoring.
 
+## What's inside (30-second scan)
+
+- **Plugin architecture** — providers, evaluators, and targets are single classes on a generic `Registry`; new capabilities never touch the engine.
+- **Providers** — Mock, a `scripted` fixture model, Ollama (local), OpenAI / Anthropic / Mistral (optional).
+- **Evaluators** — ExactMatch, RegexMatch, JsonSchema, LLM-as-judge (+ calibration: agreement & Cohen's kappa).
+- **Runner** — per-case error isolation, AND verdict across evaluators, repeats.
+- **Metrics** — success rate, latency P50/P95, cost, per-evaluator pass rates.
+- **Bootstrap confidence intervals** — seeded percentile bootstrap on every aggregate.
+- **Regression detection** — per-case diff + absolute/relative threshold verdict.
+- **Dashboard** — Next.js (App Router, strict TS, Tailwind): projects → datasets → runs → comparison.
+- **SDK** — dependency-light `litmus` package for serverless local runs.
+- **CLI** — Typer `litmus run` that exits non-zero on regression.
+- **GitHub Action** — a drop-in CI gate, no API key.
+
 ## Six interview talking points
 
 1. **Bootstrap confidence intervals.** Every aggregate (e.g. success rate) reports

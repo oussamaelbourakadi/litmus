@@ -14,8 +14,8 @@ systems — LLMs, RAG, agents, and vision — before and after production.
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
 ![Node 24](https://img.shields.io/badge/node-24-green.svg)
 
-**Try it in 5 minutes locally** with `docker compose up` — no API key. See the
-[Portfolio Demo](#portfolio-demo) below.
+**Try it in 5 minutes locally** with `docker compose up` — no API key.
+See the [screenshots](#screenshots) and the [demo walkthrough](#portfolio-demo-run-it-yourself).
 
 </div>
 
@@ -25,10 +25,45 @@ systems — LLMs, RAG, agents, and vision — before and after production.
 > intervals, run comparison / regression gate, dashboard, and an SDK + CLI + GitHub
 > Action. Red-Team (OWASP LLM), adversarial Vision, and Monitor are on the roadmap.
 
-## Portfolio Demo
+## Screenshots
 
-Litmus is a portfolio / CV project. It does **not** require any hosted service —
-the intended way to see it is the **local Docker demo** (no API key, no account):
+Real screenshots of the **local Docker demo**, driven by the built-in `scripted`
+provider (a deterministic fixture model, **no API key**) — every number is computed
+by the app, nothing is mocked-up.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/media/landing.png" alt="Landing page"/><br/><sub><b>Landing</b> — the three pillars; Evaluate is shipped.</sub></td>
+    <td width="50%"><img src="docs/media/dashboard.png" alt="Projects dashboard"/><br/><sub><b>Projects</b> — create and browse evaluation projects.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/media/dataset.png" alt="Dataset test cases"/><br/><sub><b>Dataset</b> — the test cases (input → expected).</sub></td>
+    <td width="50%"><img src="docs/media/runs.png" alt="Runs and comparison launcher"/><br/><sub><b>Runs</b> — launch a run, see the runs list (100% vs 83.3%), pick two to compare.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/media/compare.png" alt="Run comparison"/><br/><sub><b>Compare</b> — a −16.7% drop flagged as a <b>regression</b>, with success/latency deltas.</sub></td>
+    <td width="50%"><img src="docs/media/compare-cases.png" alt="Per-case diff"/><br/><sub><b>Per-case diff</b> — the two regressed cases highlighted.</sub></td>
+  </tr>
+</table>
+
+## Highlights
+
+| Area | What it does |
+| --- | --- |
+| **Plugin architecture** | Providers, evaluators, and targets are single classes registered on a generic `Registry` — add a capability without touching the engine. |
+| **Providers** | Mock, a `scripted` fixture model, Ollama (local, no key), and OpenAI / Anthropic / Mistral (optional, env-gated). |
+| **Evaluators** | ExactMatch, RegexMatch, JsonSchema, and an LLM-as-judge with measured calibration (agreement + Cohen's kappa). |
+| **Runner** | Runs a target over a dataset with per-case error isolation, an AND verdict across evaluators, and repeats. |
+| **Metrics** | Success rate, latency P50/P95, estimated cost (price table), and per-evaluator pass rates. |
+| **Bootstrap CI** | Seeded percentile-bootstrap confidence intervals on every aggregate — no invented point metrics. |
+| **Regression detection** | Compares two runs, classifies per-case regressions/improvements, and renders an absolute/relative threshold verdict. |
+| **Dashboard** | Next.js (App Router, strict TS, Tailwind): projects → datasets → runs → comparison. |
+| **SDK + CLI** | A dependency-light `litmus` package and a Typer CLI that gate CI on regression (exit ≠ 0). |
+| **GitHub Action** | Drop-in workflow that runs the gate on every push — no API key. |
+
+## Portfolio Demo (run it yourself)
+
+No hosted service required — the intended way to see Litmus is the **local Docker demo**:
 
 ```bash
 git clone https://github.com/oussamaelbourakadi/litmus.git
@@ -37,55 +72,35 @@ docker compose up --build
 # Dashboard → http://localhost:3000   ·   API docs → http://localhost:8000/docs
 ```
 
-Then walk through the demo — it uses the built-in **`scripted`** provider (a
-deterministic fixture model, no key), so the results are real, not faked:
+Then reproduce the screenshots above (every value is computed by the app):
 
 1. Create a **project**, then a **dataset**.
-2. Upload [`examples/datasets/demo_qa.csv`](./examples/datasets/demo_qa.csv)
-   (12 general-knowledge questions).
-3. Launch **Run #1** — provider `scripted`, model **`mock-small`** → **83% success**.
-4. Launch **Run #2** — provider `scripted`, model **`mock-large`** → **100% success**.
-5. **Compare** Run #1 (base) vs Run #2 (candidate): **+16.7%** success, 2 cases
-   improved (highlighted green), higher latency & cost, **verdict PASS**.
+2. Open the dataset → **Add cases (CSV)** → paste
+   [`examples/datasets/demo_qa.csv`](./examples/datasets/demo_qa.csv) (12 questions).
+3. Launch a run — provider `scripted`, model **`mock-large`** → **100% success**.
+4. Launch another run — model **`mock-small`** → **83.3% success** (it misses two
+   harder questions).
+5. **Compare** them: pick the 100% run as **base** and the 83.3% run as **candidate**
+   → Litmus flags a **−16.7% regression** with the two failing cases highlighted.
+   (Swap base/candidate to see the same delta reported as an improvement.)
 
 The `scripted` provider answers a curated Q&A bank from its own knowledge; the
-`mock-small` tier deterministically misses two harder questions, so the two runs
-differ by a real, reproducible margin — the app computes every number.
+`mock-small` tier deterministically misses two questions, so the two runs differ by
+a real, reproducible margin.
 
-<table>
-  <tr>
-    <td width="50%"><img src="docs/media/dashboard.png" alt="Dashboard" /></td>
-    <td width="50%"><img src="docs/media/runs.png" alt="Run detail" /></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/media/compare.png" alt="Run comparison" /></td>
-    <td width="50%"><img src="docs/media/metrics.png" alt="Metrics with confidence intervals" /></td>
-  </tr>
-</table>
-
-> The images above are labeled **placeholders**. Replace them with real
-> screenshots of your running instance — see
-> [`docs/media/README.md`](./docs/media/README.md) for exactly what to capture.
-
-### Record a 2-minute demo video
+### Record a 2-minute demo video (optional)
 
 A short screen recording makes the project instantly legible to a recruiter:
 
-1. Start the stack: `docker compose up --build` and open `http://localhost:3000`.
-2. Record your screen (free tools): **Windows** Xbox Game Bar (`Win+G`) or
-   [OBS Studio](https://obsproject.com/); **macOS** `Cmd+Shift+5`; **Linux** OBS.
-3. Follow this ~2-minute script:
-   - **0:00** — Landing page → "Open the dashboard".
-   - **0:15** — Create a project and a dataset; upload `examples/datasets/demo_qa.csv`.
-   - **0:40** — Launch **Run #1**: provider `scripted`, model `mock-small`, exact-match.
-   - **1:00** — Open the run detail: point out the **success rate with its bootstrap
-     confidence interval**, latency P50/P95, cost, and the per-case results table.
-   - **1:20** — Launch **Run #2**: same, but model `mock-large` (100%).
-   - **1:35** — **Compare** Run #1 vs Run #2 → the two improved cases are highlighted
-     and the **verdict** badge shows PASS with the deltas.
-   - **1:50** — Mention it runs with **no API key** and the CLI gates CI on regression.
-4. Export as MP4, upload it (GitHub release asset, YouTube unlisted, or Loom), and
-   link it here.
+1. Start the stack and open `http://localhost:3000`.
+2. Record your screen — **Windows** Xbox Game Bar (`Win+G`) or
+   [OBS](https://obsproject.com/); **macOS** `Cmd+Shift+5`; **Linux** OBS.
+3. ~2-minute script: landing → create a project & dataset → upload the CSV → run
+   `mock-large` (100%) → run `mock-small` (83.3%) → open a run to show the **success
+   rate with its bootstrap confidence interval**, latency and cost → **Compare** to
+   show the regression verdict and the highlighted cases → mention **no API key** and
+   the CLI gating CI.
+4. Export as MP4 and link it here (GitHub release asset, YouTube unlisted, or Loom).
 
 ## Why Litmus
 
@@ -144,23 +159,12 @@ flowchart LR
 
 ## Evaluate — what ships today
 
-- **Providers:** Mock (deterministic, seeded), Ollama (local, no key), OpenAI / Anthropic / Mistral (optional, env-gated).
+- **Providers:** Mock (deterministic, seeded), a `scripted` fixture model, Ollama (local, no key), and OpenAI / Anthropic / Mistral (optional, env-gated).
 - **Evaluators:** ExactMatch, RegexMatch, JsonSchema, LLMJudge (rubric → JSON verdict) + judge calibration (agreement, Cohen's kappa).
 - **Engine:** per-case error isolation, AND verdict, repeats; metrics = success rate **with bootstrap CI**, latency P50/P95, cost (price table), per-evaluator pass rates.
 - **Compare:** aggregate deltas + per-case regressions + an absolute/relative **threshold verdict**.
 - **Dashboard:** projects → datasets (CSV upload) → runs → metric cards + per-case table → comparison with highlighted regressions.
 - **SDK + CLI + GitHub Action:** local, serverless runs that **fail CI on regression**.
-
-## Quickstart (5 minutes, no API key)
-
-```bash
-git clone https://github.com/oussamaelbourakadi/litmus.git
-cd litmus
-docker compose up --build
-```
-
-- API: http://localhost:8000 (Swagger `/docs`, health `/health`)
-- Dashboard: http://localhost:3000
 
 ## CLI / SDK / GitHub Action
 

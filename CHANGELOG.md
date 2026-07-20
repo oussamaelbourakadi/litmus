@@ -18,9 +18,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Reframed as a portfolio/CV project: the primary demo is **local Docker**
-  (`docker compose up`), a hosted demo is optional. Added a **Portfolio Demo**
-  section, screenshot placeholders in `docs/media/`, and a 2-minute demo-video
-  guide. CI and tests unchanged.
+  (`docker compose up`), a hosted demo is optional. Polished the README with real
+  demo **screenshots** (`docs/media/`), a titled **Screenshots** section, a
+  recruiter-facing **Highlights** table, and a 2-minute demo-video guide. Removed a
+  duplicate quickstart. CI and tests unchanged.
 
 ### Added — Phase 1.7 (deployment & docs)
 
