@@ -42,9 +42,19 @@ class RunRead(BaseModel):
     dataset_id: uuid.UUID
     status: str
     repeats: int
+    total_cases: int = 0
+    completed_cases: int = 0
     aggregates: dict[str, Any] = Field(default_factory=dict)
     error: str | None = None
     results: list[CaseResultRead] = Field(default_factory=list)
+
+
+class RunStatusRead(BaseModel):
+    id: uuid.UUID
+    status: str
+    total_cases: int
+    completed_cases: int
+    error: str | None = None
 
 
 class RunSummaryRead(BaseModel):

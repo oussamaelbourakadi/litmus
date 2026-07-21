@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -17,14 +18,16 @@ from app.api.health import router as health_router
 from app.api.projects import router as projects_router
 from app.api.runs import router as runs_router
 from app.config import get_settings
+from app.db.session import AsyncSessionLocal
+from app.engine.execution import CancellationRegistry
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger("litmus")
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    """Application lifespan: dispose the DB engine cleanly on shutdown."""
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Application lifespan: cancel in-flight runs and dispose the DB engine."""
     settings = get_settings()
     logger.info(
         "Starting %s v%s (%s)",
@@ -33,6 +36,14 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         settings.environment,
     )
     yield
+
+    # Stop any in-flight background run tasks (not durable yet — see 1.8.2).
+    tasks: list[asyncio.Task[None]] = list(app.state.run_tasks)
+    for task in tasks:
+        task.cancel()
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+
     from app.db.session import engine
 
     await engine.dispose()
@@ -47,6 +58,11 @@ def create_app() -> FastAPI:
         summary="Ship AI you can trust — evaluate, red-team, and monitor AI systems.",
         lifespan=lifespan,
     )
+
+    # Background-run execution state (see app/engine/execution.py).
+    app.state.run_session_factory = AsyncSessionLocal
+    app.state.cancellations = CancellationRegistry()
+    app.state.run_tasks = set()
 
     app.add_middleware(
         CORSMiddleware,

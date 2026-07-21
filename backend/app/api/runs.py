@@ -1,22 +1,23 @@
-"""Run endpoints: launch an evaluation run (synchronous) and read results.
+"""Run endpoints: launch an evaluation run (async, in the background) and read it.
 
-Runs execute in-request for now; Celery/Redis will offload long runs (Ollama /
-cloud) in a later sub-phase.
+`create_run` validates the request, persists a pending run, and schedules an
+in-process background task to execute it; results and progress are polled via
+`GET /runs/{id}` (or the lightweight `/status`), and a run can be cancelled.
+Durable, resumable execution via a Redis worker arrives in sub-phase 1.8.2.
 """
 
 from __future__ import annotations
 
+import asyncio
 import uuid
-from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, HTTPException, Request, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DbSession
-from app.engine.metrics import RunMetrics
-from app.engine.runner import EvalRunner
-from app.evaluators.base import EvalCase, Evaluator
+from app.engine.execution import execute_run
+from app.evaluators.base import Evaluator
 from app.evaluators.exact_match import ExactMatch
 from app.evaluators.json_schema import JsonSchema
 from app.evaluators.llm_judge import LLMJudge
@@ -32,6 +33,7 @@ from app.schemas.run import (
     EvaluatorSpec,
     RunCreate,
     RunRead,
+    RunStatusRead,
     RunSummaryRead,
 )
 from app.targets.provider_target import ProviderTarget
@@ -72,29 +74,6 @@ def _build_evaluator(spec: EvaluatorSpec) -> Evaluator:
             raise HTTPException(status_code=400, detail=f"unknown evaluator: {spec.name}")
 
 
-def _serialize_metrics(metrics: RunMetrics) -> dict[str, object]:
-    ci = metrics.success_rate_ci
-    return {
-        "total": metrics.total,
-        "passed": metrics.passed,
-        "errors": metrics.errors,
-        "success_rate": metrics.success_rate,
-        "success_rate_ci": {
-            "point": ci.point,
-            "low": ci.low,
-            "high": ci.high,
-            "confidence": ci.confidence,
-        },
-        "latency_p50": metrics.latency_p50,
-        "latency_p95": metrics.latency_p95,
-        "latency_mean": metrics.latency_mean,
-        "total_cost": metrics.total_cost,
-        "evaluator_pass_rates": metrics.evaluator_pass_rates,
-        "repeat_success_mean": metrics.repeat_success_mean,
-        "repeat_success_std": metrics.repeat_success_std,
-    }
-
-
 async def _read_run(db: AsyncSession, run_id: uuid.UUID) -> RunRead:
     run = await db.get(EvalRun, run_id)
     if run is None:
@@ -122,6 +101,8 @@ async def _read_run(db: AsyncSession, run_id: uuid.UUID) -> RunRead:
         dataset_id=run.dataset_id,
         status=run.status,
         repeats=run.repeats,
+        total_cases=run.total_cases,
+        completed_cases=run.completed_cases,
         aggregates=run.aggregates,
         error=run.error,
         results=results,
@@ -133,31 +114,21 @@ async def _read_run(db: AsyncSession, run_id: uuid.UUID) -> RunRead:
     response_model=RunRead,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_run(dataset_id: uuid.UUID, payload: RunCreate, db: DbSession) -> RunRead:
+async def create_run(
+    dataset_id: uuid.UUID, payload: RunCreate, request: Request, db: DbSession
+) -> RunRead:
     dataset = await db.get(Dataset, dataset_id)
     if dataset is None or dataset.is_deleted:
         raise HTTPException(status_code=404, detail="dataset not found")
 
-    case_rows = list(
-        (
-            await db.execute(
-                select(TestCase)
-                .where(TestCase.dataset_id == dataset_id)
-                .order_by(TestCase.created_at, TestCase.id)
-            )
-        )
-        .scalars()
-        .all()
+    case_count = await db.scalar(
+        select(func.count(TestCase.id)).where(TestCase.dataset_id == dataset_id)
     )
-    if not case_rows:
+    if not case_count:
         raise HTTPException(status_code=400, detail="dataset has no test cases")
 
-    eval_cases = [
-        EvalCase(input=tc.input, expected=tc.expected, metadata=tc.case_metadata)
-        for tc in case_rows
-    ]
+    # Build target + evaluators now so bad specs fail fast with a 400.
     evaluators = [_build_evaluator(spec) for spec in payload.evaluators]
-
     try:
         provider = make_provider(payload.provider)
     except KeyError as exc:
@@ -173,8 +144,9 @@ async def create_run(dataset_id: uuid.UUID, payload: RunCreate, db: DbSession) -
     run = EvalRun(
         project_id=dataset.project_id,
         dataset_id=dataset_id,
-        status=RunStatus.RUNNING,
+        status=RunStatus.PENDING,
         repeats=payload.repeats,
+        total_cases=case_count * payload.repeats,
         target_config={
             "provider": payload.provider,
             "model": payload.model,
@@ -183,40 +155,63 @@ async def create_run(dataset_id: uuid.UUID, payload: RunCreate, db: DbSession) -
             "seed": payload.seed,
         },
         evaluator_config=[spec.model_dump() for spec in payload.evaluators],
-        started_at=datetime.now(UTC),
     )
     db.add(run)
-    await db.flush()
-
-    runner = EvalRunner(require_all=True)
-    outcome = await runner.run(target, eval_cases, evaluators, repeats=payload.repeats)
-    assert outcome.metrics is not None
-
-    for record in outcome.records:
-        source_case = case_rows[record.case_index]
-        db.add(
-            CaseResult(
-                eval_run_id=run.id,
-                test_case_id=source_case.id,
-                repeat_index=record.repeat_index,
-                output=record.output,
-                latency_ms=record.latency_ms,
-                passed=record.passed,
-                scores=record.scores,
-                error=record.error,
-            )
-        )
-
-    run.status = RunStatus.COMPLETED
-    run.finished_at = datetime.now(UTC)
-    run.aggregates = _serialize_metrics(outcome.metrics)
     await db.commit()
+    await db.refresh(run)
+
+    state = request.app.state
+    task = asyncio.create_task(
+        execute_run(
+            run.id,
+            target,
+            evaluators,
+            payload.repeats,
+            session_factory=state.run_session_factory,
+            cancellations=state.cancellations,
+        )
+    )
+    state.run_tasks.add(task)
+    task.add_done_callback(state.run_tasks.discard)
+
     return await _read_run(db, run.id)
 
 
 @router.get("/runs/{run_id}", response_model=RunRead)
 async def get_run(run_id: uuid.UUID, db: DbSession) -> RunRead:
     return await _read_run(db, run_id)
+
+
+@router.get("/runs/{run_id}/status", response_model=RunStatusRead)
+async def get_run_status(run_id: uuid.UUID, db: DbSession) -> RunStatusRead:
+    run = await db.get(EvalRun, run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    return RunStatusRead(
+        id=run.id,
+        status=run.status,
+        total_cases=run.total_cases,
+        completed_cases=run.completed_cases,
+        error=run.error,
+    )
+
+
+@router.post("/runs/{run_id}/cancel", response_model=RunStatusRead)
+async def cancel_run(run_id: uuid.UUID, request: Request, db: DbSession) -> RunStatusRead:
+    run = await db.get(EvalRun, run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    if run.status not in RunStatus.TERMINAL:
+        request.app.state.cancellations.request(run_id)
+        run.cancel_requested = True
+        await db.commit()
+    return RunStatusRead(
+        id=run.id,
+        status=run.status,
+        total_cases=run.total_cases,
+        completed_cases=run.completed_cases,
+        error=run.error,
+    )
 
 
 @router.get("/datasets/{dataset_id}/runs", response_model=list[RunSummaryRead])
