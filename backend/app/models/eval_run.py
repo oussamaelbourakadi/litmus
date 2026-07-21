@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -20,6 +20,9 @@ class RunStatus:
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
+
+    TERMINAL = frozenset({COMPLETED, FAILED, CANCELLED})
 
 
 class EvalRun(UUIDMixin, TimestampMixin, Base):
@@ -33,6 +36,9 @@ class EvalRun(UUIDMixin, TimestampMixin, Base):
     )
     status: Mapped[str] = mapped_column(String(20), default=RunStatus.PENDING, nullable=False)
     repeats: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    total_cases: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completed_cases: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    cancel_requested: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     target_config: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     evaluator_config: Mapped[list[dict[str, Any]]] = mapped_column(
         JSON, default=list, nullable=False
