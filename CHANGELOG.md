@@ -6,6 +6,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — Phase 1.8.0 (async execution)
+
+- Runs now execute **asynchronously in the background** instead of blocking the
+  HTTP request: `POST /datasets/{id}/runs` returns a pending run immediately, and
+  results are persisted incrementally.
+- Run lifecycle: `pending → running → completed | failed | cancelled`, with
+  `total_cases` / `completed_cases` progress (migration 0003).
+- New endpoints: `GET /runs/{id}/status` (lightweight progress) and
+  `POST /runs/{id}/cancel` (cooperative cancellation).
+- Dashboard run page polls for live progress and can cancel a run.
+- **Known limitation:** in-process asyncio tasks are not yet durable across a
+  server restart — durable, resumable execution via a Redis worker arrives in
+  1.8.2.
+
 ### Added
 
 - `ScriptedProvider` (registered as `scripted`): a deterministic fixture model
