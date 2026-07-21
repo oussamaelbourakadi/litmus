@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
+from typing import Any
+
 from httpx import AsyncClient
+
+WaitForRun = Callable[[AsyncClient, str], Awaitable[dict[str, Any]]]
 
 
 async def _project(client: AsyncClient) -> str:
@@ -53,16 +58,18 @@ async def test_upload_csv_requires_input_column(api_client: AsyncClient) -> None
     assert response.status_code == 400
 
 
-async def test_list_runs(api_client: AsyncClient) -> None:
+async def test_list_runs(api_client: AsyncClient, wait_for_run: WaitForRun) -> None:
     project_id = await _project(api_client)
     dataset = await api_client.post(
         f"/projects/{project_id}/datasets",
         json={"name": "D", "cases": [{"input": "a", "expected": "b"}]},
     )
     dataset_id = dataset.json()["id"]
-    await api_client.post(
+    run = await api_client.post(
         f"/datasets/{dataset_id}/runs", json={"evaluators": [{"name": "exact_match"}]}
     )
+    await wait_for_run(api_client, run.json()["id"])
+
     response = await api_client.get(f"/datasets/{dataset_id}/runs")
     assert response.status_code == 200
     body = response.json()

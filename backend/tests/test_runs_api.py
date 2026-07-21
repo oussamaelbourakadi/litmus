@@ -1,8 +1,13 @@
-"""End-to-end API tests: project -> dataset -> run -> results."""
+"""End-to-end API tests: project -> dataset -> run (async) -> results."""
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
+from typing import Any
+
 from httpx import AsyncClient
+
+WaitForRun = Callable[[AsyncClient, str], Awaitable[dict[str, Any]]]
 
 
 async def _make_project_and_dataset(client: AsyncClient, cases: list[dict[str, str]]) -> str:
@@ -19,7 +24,9 @@ async def _make_project_and_dataset(client: AsyncClient, cases: list[dict[str, s
     return dataset_id
 
 
-async def test_run_persists_and_is_readable(api_client: AsyncClient) -> None:
+async def test_run_is_created_pending_then_completes(
+    api_client: AsyncClient, wait_for_run: WaitForRun
+) -> None:
     dataset_id = await _make_project_and_dataset(
         api_client, [{"input": "ping", "expected": "x"}, {"input": "pong", "expected": "y"}]
     )
@@ -34,29 +41,30 @@ async def test_run_persists_and_is_readable(api_client: AsyncClient) -> None:
         },
     )
     assert response.status_code == 201
-    body = response.json()
-    assert body["status"] == "completed"
-    assert body["aggregates"]["total"] == 2
-    assert body["aggregates"]["success_rate"] == 1.0
-    assert "success_rate_ci" in body["aggregates"]
-    assert len(body["results"]) == 2
+    created = response.json()
+    assert created["status"] in {"pending", "running", "completed"}
+    assert created["total_cases"] == 2
 
-    run_id = body["id"]
-    fetched = await api_client.get(f"/runs/{run_id}")
-    assert fetched.status_code == 200
-    assert fetched.json()["aggregates"]["success_rate"] == 1.0
+    final = await wait_for_run(api_client, created["id"])
+    assert final["status"] == "completed"
+    assert final["completed_cases"] == 2
+    assert final["aggregates"]["total"] == 2
+    assert final["aggregates"]["success_rate"] == 1.0
+    assert "success_rate_ci" in final["aggregates"]
+    assert len(final["results"]) == 2
 
 
-async def test_run_with_repeats(api_client: AsyncClient) -> None:
+async def test_run_with_repeats(api_client: AsyncClient, wait_for_run: WaitForRun) -> None:
     dataset_id = await _make_project_and_dataset(api_client, [{"input": "ping", "expected": "x"}])
     response = await api_client.post(
         f"/datasets/{dataset_id}/runs",
         json={"provider": "mock", "repeats": 3, "evaluators": [{"name": "exact_match"}]},
     )
     assert response.status_code == 201
-    body = response.json()
-    assert len(body["results"]) == 3
-    assert body["aggregates"]["repeat_success_mean"] is not None
+    final = await wait_for_run(api_client, response.json()["id"])
+    assert final["status"] == "completed"
+    assert len(final["results"]) == 3
+    assert final["aggregates"]["repeat_success_mean"] is not None
 
 
 async def test_run_rejects_empty_dataset(api_client: AsyncClient) -> None:

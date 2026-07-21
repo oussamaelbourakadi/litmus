@@ -1,8 +1,15 @@
-"""End-to-end comparison API tests."""
+"""End-to-end comparison API tests (runs execute asynchronously)."""
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
+from typing import Any
+
 from httpx import AsyncClient
+
+WaitForRun = Callable[[AsyncClient, str], Awaitable[dict[str, Any]]]
+
+_MISSING = "00000000-0000-0000-0000-000000000000"
 
 
 async def _dataset(client: AsyncClient) -> str:
@@ -14,17 +21,29 @@ async def _dataset(client: AsyncClient) -> str:
     return str(dataset.json()["id"])
 
 
-async def _run(client: AsyncClient, dataset_id: str, evaluators: list[dict[str, object]]) -> str:
+async def _run(
+    client: AsyncClient,
+    wait_for_run: WaitForRun,
+    dataset_id: str,
+    evaluators: list[dict[str, object]],
+) -> str:
     response = await client.post(f"/datasets/{dataset_id}/runs", json={"evaluators": evaluators})
-    return str(response.json()["id"])
+    run_id = str(response.json()["id"])
+    await wait_for_run(client, run_id)
+    return run_id
 
 
-async def test_compare_detects_regression(api_client: AsyncClient) -> None:
+async def test_compare_detects_regression(
+    api_client: AsyncClient, wait_for_run: WaitForRun
+) -> None:
     dataset_id = await _dataset(api_client)
     good = await _run(
-        api_client, dataset_id, [{"name": "regex_match", "params": {"pattern": "mock"}}]
+        api_client,
+        wait_for_run,
+        dataset_id,
+        [{"name": "regex_match", "params": {"pattern": "mock"}}],
     )
-    bad = await _run(api_client, dataset_id, [{"name": "exact_match"}])
+    bad = await _run(api_client, wait_for_run, dataset_id, [{"name": "exact_match"}])
 
     response = await api_client.post(
         "/compare", json={"base_run_id": good, "candidate_run_id": bad}
@@ -37,11 +56,11 @@ async def test_compare_detects_regression(api_client: AsyncClient) -> None:
     assert body["verdict"]["passed"] is False
 
 
-async def test_compare_no_regression(api_client: AsyncClient) -> None:
+async def test_compare_no_regression(api_client: AsyncClient, wait_for_run: WaitForRun) -> None:
     dataset_id = await _dataset(api_client)
     evaluators = [{"name": "regex_match", "params": {"pattern": "mock"}}]
-    base = await _run(api_client, dataset_id, evaluators)
-    candidate = await _run(api_client, dataset_id, evaluators)
+    base = await _run(api_client, wait_for_run, dataset_id, evaluators)
+    candidate = await _run(api_client, wait_for_run, dataset_id, evaluators)
 
     response = await api_client.post(
         "/compare", json={"base_run_id": base, "candidate_run_id": candidate}
@@ -49,14 +68,12 @@ async def test_compare_no_regression(api_client: AsyncClient) -> None:
     assert response.json()["verdict"]["passed"] is True
 
 
-async def test_compare_missing_run_is_404(api_client: AsyncClient) -> None:
+async def test_compare_missing_run_is_404(
+    api_client: AsyncClient, wait_for_run: WaitForRun
+) -> None:
     dataset_id = await _dataset(api_client)
-    base = await _run(api_client, dataset_id, [{"name": "exact_match"}])
+    base = await _run(api_client, wait_for_run, dataset_id, [{"name": "exact_match"}])
     response = await api_client.post(
-        "/compare",
-        json={
-            "base_run_id": base,
-            "candidate_run_id": "00000000-0000-0000-0000-000000000000",
-        },
+        "/compare", json={"base_run_id": base, "candidate_run_id": _MISSING}
     )
     assert response.status_code == 404
