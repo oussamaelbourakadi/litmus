@@ -6,6 +6,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — Phase 1.8.1 (concurrency & resilience)
+
+- The runner executes cases with **bounded concurrency** (default 8, per-run
+  overridable via `RunCreate.concurrency`); metrics stay order-independent.
+- **Retries** with exponential backoff + full jitter on transient failures
+  (network/transport errors, HTTP 429/5xx); non-transient errors are not retried.
+- **Per-case timeout** (`case_timeout`) caps each attempt; a stuck call is isolated
+  as an errored case and the run continues.
+- **Pooled HTTP clients**: each provider/HTTP target reuses one `httpx.AsyncClient`
+  across a run, closed via `aclose()` when the run ends.
+
 ### Added — Phase 1.8.0 (async execution)
 
 - Runs now execute **asynchronously in the background** instead of blocking the
