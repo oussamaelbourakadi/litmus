@@ -17,7 +17,9 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.config import get_settings
 from app.engine.metrics import CaseOutcome, serialize_metrics
+from app.engine.retry import RetryPolicy
 from app.engine.runner import CaseRecord, EvalRunner
 from app.evaluators.base import EvalCase, Evaluator
 from app.models.case_result import CaseResult
@@ -51,6 +53,7 @@ async def execute_run(
     target: Target,
     evaluators: list[Evaluator],
     repeats: int,
+    concurrency: int,
     *,
     session_factory: SessionFactory,
     cancellations: CancellationRegistry,
@@ -103,8 +106,19 @@ async def execute_run(
         def should_cancel() -> bool:
             return cancellations.is_cancelled(run_id)
 
+        settings = get_settings()
+        runner = EvalRunner(
+            require_all=True,
+            concurrency=concurrency,
+            case_timeout=settings.case_timeout,
+            retry_policy=RetryPolicy(
+                max_attempts=settings.retry_max_attempts,
+                base_delay=settings.retry_base_delay,
+                max_delay=settings.retry_max_delay,
+            ),
+        )
         try:
-            outcome = await EvalRunner(require_all=True).run(
+            outcome = await runner.run(
                 target,
                 eval_cases,
                 evaluators,
@@ -118,13 +132,13 @@ async def execute_run(
             run.error = str(exc)
             run.finished_at = datetime.now(UTC)
             await db.commit()
-            cancellations.clear(run_id)
-            return
-
-        assert outcome.metrics is not None
-        run.status = RunStatus.CANCELLED if outcome.cancelled else RunStatus.COMPLETED
-        run.aggregates = serialize_metrics(outcome.metrics)
-        run.finished_at = datetime.now(UTC)
-        await db.commit()
+        else:
+            assert outcome.metrics is not None
+            run.status = RunStatus.CANCELLED if outcome.cancelled else RunStatus.COMPLETED
+            run.aggregates = serialize_metrics(outcome.metrics)
+            run.finished_at = datetime.now(UTC)
+            await db.commit()
+        finally:
+            await target.aclose()
 
     cancellations.clear(run_id)

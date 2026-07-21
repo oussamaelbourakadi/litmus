@@ -16,6 +16,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DbSession
+from app.config import get_settings
 from app.engine.execution import execute_run
 from app.evaluators.base import Evaluator
 from app.evaluators.exact_match import ExactMatch
@@ -140,6 +141,7 @@ async def create_run(
         seed=payload.seed,
     )
     target = ProviderTarget(provider, config)
+    concurrency = payload.concurrency or get_settings().run_concurrency
 
     run = EvalRun(
         project_id=dataset.project_id,
@@ -153,6 +155,7 @@ async def create_run(
             "temperature": payload.temperature,
             "max_tokens": payload.max_tokens,
             "seed": payload.seed,
+            "concurrency": concurrency,
         },
         evaluator_config=[spec.model_dump() for spec in payload.evaluators],
     )
@@ -167,6 +170,7 @@ async def create_run(
             target,
             evaluators,
             payload.repeats,
+            concurrency,
             session_factory=state.run_session_factory,
             cancellations=state.cancellations,
         )

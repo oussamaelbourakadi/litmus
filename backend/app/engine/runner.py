@@ -6,13 +6,15 @@ does not stop the run. The case verdict is the AND of all evaluators by default.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 
 from app.engine.metrics import CaseOutcome, RunMetrics, compute_metrics
+from app.engine.retry import RetryPolicy, with_retries
 from app.evaluators.base import EvalCase, Evaluator
-from app.targets.base import Target
+from app.targets.base import Target, TargetResponse
 
 logger = logging.getLogger("litmus.engine")
 
@@ -50,9 +52,22 @@ ShouldCancel = Callable[[], bool]
 
 
 class EvalRunner:
-    def __init__(self, *, require_all: bool = True, bootstrap_seed: int = 1234) -> None:
+    def __init__(
+        self,
+        *,
+        require_all: bool = True,
+        bootstrap_seed: int = 1234,
+        concurrency: int = 1,
+        case_timeout: float = 60.0,
+        retry_policy: RetryPolicy | None = None,
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+    ) -> None:
         self._require_all = require_all
         self._bootstrap_seed = bootstrap_seed
+        self._concurrency = max(1, concurrency)
+        self._case_timeout = case_timeout
+        self._retry_policy = retry_policy or RetryPolicy()
+        self._sleep = sleep
 
     async def run(
         self,
@@ -70,21 +85,42 @@ class EvalRunner:
         completed = 0
         cancelled = False
 
-        for repeat_index in range(repeats):
-            if cancelled:
-                break
-            for case_index, case in enumerate(cases):
+        work = iter(
+            (case_index, repeat_index, case)
+            for repeat_index in range(repeats)
+            for case_index, case in enumerate(cases)
+        )
+        in_flight: set[asyncio.Task[tuple[CaseRecord, CaseOutcome]]] = set()
+
+        def schedule_more() -> None:
+            nonlocal cancelled
+            while len(in_flight) < self._concurrency:
                 if should_cancel is not None and should_cancel():
                     cancelled = True
-                    break
-                record, outcome = await self._run_one(
-                    target, case, evaluators, case_index, repeat_index
+                    return
+                try:
+                    case_index, repeat_index, case = next(work)
+                except StopIteration:
+                    return
+                in_flight.add(
+                    asyncio.create_task(
+                        self._run_one(target, case, evaluators, case_index, repeat_index)
+                    )
                 )
+
+        schedule_more()
+        while in_flight:
+            done, _ = await asyncio.wait(in_flight, return_when=asyncio.FIRST_COMPLETED)
+            for task in done:
+                in_flight.discard(task)
+                record, outcome = task.result()
                 records.append(record)
                 outcomes.append(outcome)
                 completed += 1
                 if on_case is not None:
                     await on_case(record, outcome, completed, total)
+            if not cancelled:
+                schedule_more()
 
         metrics = compute_metrics(outcomes, repeats=repeats, bootstrap_seed=self._bootstrap_seed)
         logger.info(
@@ -96,6 +132,15 @@ class EvalRunner:
         )
         return RunOutcome(records=records, metrics=metrics, cancelled=cancelled)
 
+    async def _invoke_target(self, target: Target, prompt: str) -> TargetResponse:
+        """Call the target with a per-attempt timeout and transient-error retries."""
+
+        async def _call() -> TargetResponse:
+            async with asyncio.timeout(self._case_timeout):
+                return await target.run(prompt)
+
+        return await with_retries(_call, self._retry_policy, sleep=self._sleep)
+
     async def _run_one(
         self,
         target: Target,
@@ -105,8 +150,8 @@ class EvalRunner:
         repeat_index: int,
     ) -> tuple[CaseRecord, CaseOutcome]:
         try:
-            response = await target.run(case.input)
-        except Exception as exc:  # per-case isolation
+            response = await self._invoke_target(target, case.input)
+        except Exception as exc:  # per-case isolation (after retries/timeout)
             logger.warning("case %d failed at target: %s", case_index, exc)
             record = CaseRecord(case_index, repeat_index, "", 0.0, False, {}, str(exc))
             outcome = CaseOutcome(

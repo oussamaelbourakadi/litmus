@@ -71,6 +71,13 @@ class Settings(BaseSettings):
     mistral_base_url: str = "https://api.mistral.ai/v1"
     anthropic_version: str = "2023-06-01"
 
+    # --- Execution (concurrency + resilience) ---
+    run_concurrency: int = 8
+    case_timeout: float = 60.0
+    retry_max_attempts: int = 4
+    retry_base_delay: float = 0.5
+    retry_max_delay: float = 8.0
+
     @property
     def is_production(self) -> bool:
         return self.environment.lower() == "production"

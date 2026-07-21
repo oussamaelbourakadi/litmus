@@ -21,6 +21,7 @@ class RunCreate(BaseModel):
     max_tokens: int = Field(default=512, ge=1)
     seed: int | None = 0
     repeats: int = Field(default=1, ge=1, le=50)
+    concurrency: int | None = Field(default=None, ge=1, le=64)
     evaluators: list[EvaluatorSpec] = Field(
         default_factory=lambda: [EvaluatorSpec(name="exact_match")]
     )
