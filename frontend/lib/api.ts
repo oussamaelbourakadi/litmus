@@ -77,9 +77,25 @@ export interface Run {
   dataset_id: string;
   status: string;
   repeats: number;
+  total_cases: number;
+  completed_cases: number;
   aggregates: Partial<Aggregates>;
   error: string | null;
   results: CaseResult[];
+}
+
+export interface RunStatus {
+  id: string;
+  status: string;
+  total_cases: number;
+  completed_cases: number;
+  error: string | null;
+}
+
+const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
+
+export function isTerminal(status: string): boolean {
+  return TERMINAL_STATUSES.has(status);
 }
 
 export interface RunSummary {
@@ -172,6 +188,9 @@ export const addCases = (
 export const listRuns = (datasetId: string) =>
   request<RunSummary[]>(`/datasets/${datasetId}/runs`);
 export const getRun = (id: string) => request<Run>(`/runs/${id}`);
+export const getRunStatus = (id: string) => request<RunStatus>(`/runs/${id}/status`);
+export const cancelRun = (id: string) =>
+  request<RunStatus>(`/runs/${id}/cancel`, { method: "POST" });
 export const createRun = (datasetId: string, body: RunRequest) =>
   request<Run>(`/datasets/${datasetId}/runs`, { method: "POST", body: JSON.stringify(body) });
 

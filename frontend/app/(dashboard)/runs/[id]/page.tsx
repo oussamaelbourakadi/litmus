@@ -2,50 +2,97 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { MetricCard } from "@/components/MetricCard";
-import { Badge, ErrorState, Spinner } from "@/components/ui";
-import { getRun } from "@/lib/api";
-import { useAsync } from "@/lib/hooks";
+import { Badge, Button, ErrorState, Spinner } from "@/components/ui";
+import { cancelRun, getRun, isTerminal, type Run } from "@/lib/api";
 import { formatCost, formatMs, formatPercent } from "@/lib/utils";
+
+function statusTone(status: string): "success" | "danger" | "warning" {
+  if (status === "completed") return "success";
+  if (status === "failed" || status === "cancelled") return "danger";
+  return "warning";
+}
 
 export default function RunDetailPage() {
   const params = useParams<{ id: string }>();
   const runId = params.id;
-  const { data, loading, error } = useAsync(useCallback(() => getRun(runId), [runId]), [runId]);
+  const [run, setRun] = useState<Run | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
-  if (loading) return <Spinner label="Loading run…" />;
+  useEffect(() => {
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    async function tick() {
+      try {
+        const data = await getRun(runId);
+        if (!active) return;
+        setRun(data);
+        if (!isTerminal(data.status)) {
+          timer = setTimeout(tick, 1000);
+        }
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : String(err));
+      }
+    }
+    void tick();
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [runId]);
+
+  const onCancel = useCallback(async () => {
+    setCancelling(true);
+    try {
+      await cancelRun(runId);
+    } catch {
+      // ignore — polling will reflect the final state
+    } finally {
+      setCancelling(false);
+    }
+  }, [runId]);
+
   if (error) return <ErrorState message={error} />;
-  if (!data) return null;
+  if (!run) return <Spinner label="Loading run…" />;
 
-  const agg = data.aggregates;
+  const agg = run.aggregates;
   const ci = agg.success_rate_ci;
+  const running = !isTerminal(run.status);
 
   return (
     <div className="space-y-8">
       <div>
         <Link
-          href={`/datasets/${data.dataset_id}`}
+          href={`/datasets/${run.dataset_id}`}
           className="text-xs text-slate-500 hover:text-slate-300"
         >
           ← Dataset
         </Link>
-        <div className="mt-2 flex items-center gap-3">
-          <h1 className="text-2xl font-bold">Run {data.id.slice(0, 8)}</h1>
-          <Badge tone={data.status === "completed" ? "success" : "warning"}>{data.status}</Badge>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold">Run {run.id.slice(0, 8)}</h1>
+          <Badge tone={statusTone(run.status)}>{run.status}</Badge>
+          {running ? (
+            <>
+              <span className="text-sm text-slate-400">
+                {run.completed_cases}/{run.total_cases} cases
+              </span>
+              <Button variant="ghost" onClick={onCancel} disabled={cancelling}>
+                {cancelling ? "Cancelling…" : "Cancel"}
+              </Button>
+            </>
+          ) : null}
         </div>
+        {run.error ? <p className="mt-2 text-sm text-rose-300">{run.error}</p> : null}
       </div>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           label="Success rate"
           value={agg.success_rate !== undefined ? formatPercent(agg.success_rate) : "—"}
-          sub={
-            ci
-              ? `95% CI [${formatPercent(ci.low)}, ${formatPercent(ci.high)}]`
-              : undefined
-          }
+          sub={ci ? `95% CI [${formatPercent(ci.low)}, ${formatPercent(ci.high)}]` : undefined}
         />
         <MetricCard
           label="Latency P50 / P95"
@@ -62,7 +109,7 @@ export default function RunDetailPage() {
         <MetricCard
           label="Cases / errors"
           value={`${agg.total ?? 0} / ${agg.errors ?? 0}`}
-          sub={data.repeats > 1 ? `${data.repeats} repeats` : undefined}
+          sub={run.repeats > 1 ? `${run.repeats} repeats` : undefined}
         />
       </section>
 
@@ -78,9 +125,14 @@ export default function RunDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {data.results.map((result, index) => (
-                <tr key={`${result.test_case_id}-${result.repeat_index}-${index}`} className="border-t border-slate-800">
-                  <td className="max-w-md truncate px-3 py-2 text-slate-200">{result.output || "—"}</td>
+              {run.results.map((result, index) => (
+                <tr
+                  key={`${result.test_case_id}-${result.repeat_index}-${index}`}
+                  className="border-t border-slate-800"
+                >
+                  <td className="max-w-md truncate px-3 py-2 text-slate-200">
+                    {result.output || "—"}
+                  </td>
                   <td className="px-3 py-2 text-slate-400">{formatMs(result.latency_ms)}</td>
                   <td className="px-3 py-2">
                     <Badge tone={result.passed ? "success" : "danger"}>
