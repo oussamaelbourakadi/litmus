@@ -59,5 +59,9 @@ class ModelProvider(ABC):
         """Generate a completion for ``prompt`` under ``config``."""
         raise NotImplementedError
 
+    async def aclose(self) -> None:
+        """Release resources (e.g. a pooled HTTP client). No-op by default."""
+        return None
+
 
 provider_registry: Registry[ModelProvider] = Registry("provider")

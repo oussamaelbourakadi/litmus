@@ -7,6 +7,7 @@ from time import perf_counter
 import httpx
 
 from app.config import get_settings
+from app.providers._http import PooledHttpClient
 from app.providers.base import (
     GenerateResult,
     ModelProvider,
@@ -31,9 +32,13 @@ class AnthropicProvider(ModelProvider):
         settings = get_settings()
         self._api_key = api_key or settings.anthropic_api_key
         self._base_url = (base_url or settings.anthropic_base_url).rstrip("/")
-        self._timeout = timeout or settings.request_timeout
         self._version = settings.anthropic_version
-        self._transport = transport
+        self._http = PooledHttpClient(
+            timeout=timeout or settings.request_timeout, transport=transport
+        )
+
+    async def aclose(self) -> None:
+        await self._http.aclose()
 
     async def generate(self, prompt: str, config: ProviderConfig) -> GenerateResult:
         if not self._api_key:
@@ -47,17 +52,13 @@ class AnthropicProvider(ModelProvider):
         }
 
         start = perf_counter()
-        async with httpx.AsyncClient(transport=self._transport, timeout=self._timeout) as client:
-            response = await client.post(
-                f"{self._base_url}/messages",
-                json=payload,
-                headers={
-                    "x-api-key": self._api_key,
-                    "anthropic-version": self._version,
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
+        response = await self._http.get().post(
+            f"{self._base_url}/messages",
+            json=payload,
+            headers={"x-api-key": self._api_key, "anthropic-version": self._version},
+        )
+        response.raise_for_status()
+        data = response.json()
         latency_ms = (perf_counter() - start) * 1000
 
         text = data["content"][0]["text"]

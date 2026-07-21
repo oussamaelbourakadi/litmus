@@ -8,6 +8,7 @@ from time import perf_counter
 import httpx
 
 from app.config import get_settings
+from app.providers._http import PooledHttpClient
 from app.targets.base import Target, TargetResponse, target_registry
 
 
@@ -41,20 +42,23 @@ class HttpTarget(Target):
         self._input_field = input_field
         self._output_path = tuple(output_path)
         self._headers = dict(headers) if headers else None
-        self._timeout = timeout or get_settings().request_timeout
-        self._transport = transport
+        self._http = PooledHttpClient(
+            timeout=timeout or get_settings().request_timeout, transport=transport
+        )
+
+    async def aclose(self) -> None:
+        await self._http.aclose()
 
     async def run(self, input: str) -> TargetResponse:
         start = perf_counter()
-        async with httpx.AsyncClient(transport=self._transport, timeout=self._timeout) as client:
-            response = await client.request(
-                self._method,
-                self._url,
-                json={self._input_field: input},
-                headers=self._headers,
-            )
-            response.raise_for_status()
-            data = response.json()
+        response = await self._http.get().request(
+            self._method,
+            self._url,
+            json={self._input_field: input},
+            headers=self._headers,
+        )
+        response.raise_for_status()
+        data = response.json()
         latency_ms = (perf_counter() - start) * 1000
 
         return TargetResponse(

@@ -11,6 +11,7 @@ from time import perf_counter
 import httpx
 
 from app.config import get_settings
+from app.providers._http import PooledHttpClient
 from app.providers.base import (
     GenerateResult,
     ModelProvider,
@@ -32,8 +33,12 @@ class OllamaProvider(ModelProvider):
     ) -> None:
         settings = get_settings()
         self._base_url = (base_url or settings.ollama_base_url).rstrip("/")
-        self._timeout = timeout or settings.request_timeout
-        self._transport = transport
+        self._http = PooledHttpClient(
+            timeout=timeout or settings.request_timeout, transport=transport
+        )
+
+    async def aclose(self) -> None:
+        await self._http.aclose()
 
     async def generate(self, prompt: str, config: ProviderConfig) -> GenerateResult:
         payload = {
@@ -47,10 +52,9 @@ class OllamaProvider(ModelProvider):
             },
         }
         start = perf_counter()
-        async with httpx.AsyncClient(transport=self._transport, timeout=self._timeout) as client:
-            response = await client.post(f"{self._base_url}/api/generate", json=payload)
-            response.raise_for_status()
-            data = response.json()
+        response = await self._http.get().post(f"{self._base_url}/api/generate", json=payload)
+        response.raise_for_status()
+        data = response.json()
         latency_ms = (perf_counter() - start) * 1000
 
         usage = Usage(

@@ -7,6 +7,7 @@ from time import perf_counter
 import httpx
 
 from app.config import get_settings
+from app.providers._http import PooledHttpClient
 from app.providers.base import (
     GenerateResult,
     ModelProvider,
@@ -31,8 +32,12 @@ class MistralProvider(ModelProvider):
         settings = get_settings()
         self._api_key = api_key or settings.mistral_api_key
         self._base_url = (base_url or settings.mistral_base_url).rstrip("/")
-        self._timeout = timeout or settings.request_timeout
-        self._transport = transport
+        self._http = PooledHttpClient(
+            timeout=timeout or settings.request_timeout, transport=transport
+        )
+
+    async def aclose(self) -> None:
+        await self._http.aclose()
 
     async def generate(self, prompt: str, config: ProviderConfig) -> GenerateResult:
         if not self._api_key:
@@ -46,14 +51,13 @@ class MistralProvider(ModelProvider):
         }
 
         start = perf_counter()
-        async with httpx.AsyncClient(transport=self._transport, timeout=self._timeout) as client:
-            response = await client.post(
-                f"{self._base_url}/chat/completions",
-                json=payload,
-                headers={"Authorization": f"Bearer {self._api_key}"},
-            )
-            response.raise_for_status()
-            data = response.json()
+        response = await self._http.get().post(
+            f"{self._base_url}/chat/completions",
+            json=payload,
+            headers={"Authorization": f"Bearer {self._api_key}"},
+        )
+        response.raise_for_status()
+        data = response.json()
         latency_ms = (perf_counter() - start) * 1000
 
         text = data["choices"][0]["message"]["content"]

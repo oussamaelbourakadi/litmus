@@ -32,5 +32,9 @@ class Target(ABC):
         """Run the target on ``input`` and return its response."""
         raise NotImplementedError
 
+    async def aclose(self) -> None:
+        """Release resources (e.g. pooled HTTP clients). No-op by default."""
+        return None
+
 
 target_registry: Registry[Target] = Registry("target")

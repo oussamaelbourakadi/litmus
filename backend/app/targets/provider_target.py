@@ -27,3 +27,6 @@ class ProviderTarget(Target):
                 "completion_tokens": result.usage.completion_tokens,
             },
         )
+
+    async def aclose(self) -> None:
+        await self._provider.aclose()
