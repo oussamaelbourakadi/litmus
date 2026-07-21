@@ -80,6 +80,30 @@ def estimate_cost(
     return (prompt_tokens / 1000.0) * input_price + (completion_tokens / 1000.0) * output_price
 
 
+def serialize_metrics(metrics: RunMetrics) -> dict[str, object]:
+    """Render run metrics into a JSON-serializable dict (for EvalRun.aggregates)."""
+    ci = metrics.success_rate_ci
+    return {
+        "total": metrics.total,
+        "passed": metrics.passed,
+        "errors": metrics.errors,
+        "success_rate": metrics.success_rate,
+        "success_rate_ci": {
+            "point": ci.point,
+            "low": ci.low,
+            "high": ci.high,
+            "confidence": ci.confidence,
+        },
+        "latency_p50": metrics.latency_p50,
+        "latency_p95": metrics.latency_p95,
+        "latency_mean": metrics.latency_mean,
+        "total_cost": metrics.total_cost,
+        "evaluator_pass_rates": metrics.evaluator_pass_rates,
+        "repeat_success_mean": metrics.repeat_success_mean,
+        "repeat_success_std": metrics.repeat_success_std,
+    }
+
+
 def compute_metrics(
     outcomes: Sequence[CaseOutcome],
     *,

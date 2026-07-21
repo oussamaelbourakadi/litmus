@@ -7,7 +7,7 @@ does not stop the run. The case verdict is the AND of all evaluators by default.
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 
 from app.engine.metrics import CaseOutcome, RunMetrics, compute_metrics
@@ -40,6 +40,13 @@ class CaseRecord:
 class RunOutcome:
     records: list[CaseRecord] = field(default_factory=list)
     metrics: RunMetrics | None = None
+    cancelled: bool = False
+
+
+# Called after each completed case: (record, outcome, completed_count, total_count).
+OnCase = Callable[[CaseRecord, CaseOutcome, int, int], Awaitable[None]]
+# Checked before each case; returning True stops the run early (cooperative cancel).
+ShouldCancel = Callable[[], bool]
 
 
 class EvalRunner:
@@ -54,26 +61,40 @@ class EvalRunner:
         evaluators: Sequence[Evaluator],
         *,
         repeats: int = 1,
+        on_case: OnCase | None = None,
+        should_cancel: ShouldCancel | None = None,
     ) -> RunOutcome:
         records: list[CaseRecord] = []
         outcomes: list[CaseOutcome] = []
+        total = len(cases) * repeats
+        completed = 0
+        cancelled = False
 
         for repeat_index in range(repeats):
+            if cancelled:
+                break
             for case_index, case in enumerate(cases):
+                if should_cancel is not None and should_cancel():
+                    cancelled = True
+                    break
                 record, outcome = await self._run_one(
                     target, case, evaluators, case_index, repeat_index
                 )
                 records.append(record)
                 outcomes.append(outcome)
+                completed += 1
+                if on_case is not None:
+                    await on_case(record, outcome, completed, total)
 
         metrics = compute_metrics(outcomes, repeats=repeats, bootstrap_seed=self._bootstrap_seed)
         logger.info(
-            "run complete: %d cases x %d repeats, %d errors",
-            len(cases),
-            repeats,
+            "run finished: %d/%d cases, %d errors, cancelled=%s",
+            completed,
+            total,
             metrics.errors,
+            cancelled,
         )
-        return RunOutcome(records=records, metrics=metrics)
+        return RunOutcome(records=records, metrics=metrics, cancelled=cancelled)
 
     async def _run_one(
         self,
